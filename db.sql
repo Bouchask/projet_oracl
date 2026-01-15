@@ -225,5 +225,67 @@ BEGIN
         RAISE_APPLICATION_ERROR(-20007, 'Prerequisite not satisfied');
     END IF;
 END;
+CREATE OR REPLACE VIEW v_section_capacity AS
+SELECT
+    s.section_id,
+    c.title AS course_title,
+    s.max_capacity,
+    s.current_enrolled,
+    (s.max_capacity - s.current_enrolled) AS available_seats
+FROM section s
+JOIN course c ON s.course_code = c.course_code;
+CREATE OR REPLACE VIEW v_registration_details AS
+SELECT
+    r.registration_id,
+    st.student_id,
+    st.first_name,
+    st.last_name,
+    c.title AS course_title,
+    sem.name AS semester,
+    r.registration_date,
+    r.status
+FROM registration r
+JOIN student st ON r.student_id = st.student_id
+JOIN section s ON r.section_id = s.section_id
+JOIN course c ON s.course_code = c.course_code
+JOIN semester sem ON s.semester_id = sem.semester_id;
+CREATE OR REPLACE VIEW v_students_per_course AS
+SELECT
+    c.course_code,
+    c.title AS course_title,
+    COUNT(r.registration_id) AS total_students
+FROM course c
+JOIN section s ON c.course_code = s.course_code
+LEFT JOIN registration r ON s.section_id = r.section_id
+GROUP BY c.course_code, c.title;
+CREATE OR REPLACE VIEW v_prerequisite_status AS
+SELECT
+    st.student_id,
+    st.first_name,
+    st.last_name,
+    p.course_code AS target_course,
+    p.prereq_code AS required_course,
+    cr.status
+FROM prerequisite p
+JOIN course_result cr ON cr.course_code = p.prereq_code
+JOIN student st ON st.student_id = cr.student_id;
+CREATE OR REPLACE VIEW v_capacity_issues AS
+SELECT
+    section_id,
+    max_capacity,
+    current_enrolled
+FROM section
+WHERE current_enrolled > max_capacity;
+CREATE OR REPLACE VIEW v_student_performance AS
+SELECT
+    st.student_id,
+    st.first_name,
+    st.last_name,
+    c.title AS course_title,
+    cr.grade,
+    cr.status
+FROM course_result cr
+JOIN student st ON cr.student_id = st.student_id
+JOIN course c ON cr.course_code = c.course_code;
 
 
