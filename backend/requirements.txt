@@ -1,4 +1,0 @@
-Flask
-oracledb
-Flask-Cors
-PyJWT

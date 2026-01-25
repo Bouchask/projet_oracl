@@ -211,3 +211,14 @@ SELECT
 FROM course_result cr
 JOIN student st ON cr.student_id = st.student_id
 JOIN course c ON cr.course_code = c.course_code;
+
+CREATE OR REPLACE PROCEDURE register_student (
+    p_student_id IN NUMBER,
+    p_section_id IN NUMBER
+)
+IS
+BEGIN
+    INSERT INTO registration (student_id, section_id, registration_date, status)
+    VALUES (p_student_id, p_section_id, SYSDATE, 'registered');
+END;
+/
