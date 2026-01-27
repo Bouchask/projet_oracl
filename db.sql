@@ -134,7 +134,9 @@ CREATE TABLE grades_audit (
    ============================================= */
 CREATE OR REPLACE VIEW v_users_login AS
 SELECT code_apoge, role FROM app_user;
-
+/* =============================================
+   2. section capacity
+   ============================================= */
 CREATE OR REPLACE VIEW v_section_capacity AS
 SELECT
     s.section_id,
@@ -152,7 +154,7 @@ CREATE INDEX idx_instructor_code_apoge ON instructor(code_apoge);
 CREATE INDEX idx_registration_student ON registration(student_id);
 CREATE INDEX idx_section_course ON section(course_code);
 /* =============================================
-   VIEW 2: REGISTRATION DETAILS
+   VIEW 3: REGISTRATION DETAILS
    ============================================= */
 CREATE OR REPLACE VIEW v_registration_details AS
 SELECT 
@@ -170,7 +172,7 @@ FROM
     JOIN course c ON se.course_code = c.course_code;
 
 /* =============================================
-   VIEW 3: SECTION DETAILS
+   VIEW 4: SECTION DETAILS
    ============================================= */
 CREATE OR REPLACE VIEW v_section_details AS
 SELECT 
@@ -191,7 +193,7 @@ FROM
     JOIN instructor i ON se.instructor_id = i.instructor_id
     JOIN salle sa ON se.salle_id = sa.salle_id;
 /* =============================================
-   VIEW 4: releve de note
+   VIEW 5: releve de note
    ============================================= */
 CREATE OR REPLACE VIEW v_student_transcript AS
 SELECT 
@@ -211,6 +213,58 @@ SELECT
 FROM student s
 JOIN course_result cr ON s.student_id = cr.student_id
 JOIN course c ON cr.course_code = c.course_code;
+/* =============================================
+   VIEW 6: RESULTATS GROUPES PAR SEMESTRE
+   ============================================= */
+CREATE OR REPLACE VIEW v_student_results_grouped AS
+SELECT 
+    s.code_apoge,
+    s.first_name,
+    s.last_name,
+    sem.name AS semester_name,
+    sem.start_date, -- N7tajuh bach n-triyw (Sort) mn l-9dim l jdid
+    c.title AS course_title,
+    c.credits,
+    cr.grade,
+    cr.status
+FROM 
+    student s
+    JOIN course_result cr ON s.student_id = cr.student_id
+    JOIN course c ON cr.course_code = c.course_code
+    -- Hna kan-linkiw m3a Registration bach n3rfu had l-cours f ay semestre daz
+    JOIN registration r ON s.student_id = r.student_id
+    JOIN section sec ON r.section_id = sec.section_id AND sec.course_code = c.course_code
+    JOIN semester sem ON sec.semester_id = sem.semester_id
+ORDER BY 
+    s.code_apoge,
+    sem.start_date ASC, -- Semesters lwala huma l-3adyin
+    c.title;
+/* =============================================
+   VIEW 7: DETAILS COMPLETS POUR ETUDIANT
+   (Cours + Prof + Dept + Salle)
+   ============================================= */
+CREATE OR REPLACE VIEW v_student_enrollment_extended AS
+SELECT 
+    s.code_apoge,
+    r.registration_id,
+    r.status AS registration_status,
+    sec.section_id,
+    c.title AS course_title,
+    i.name AS instructor_name,
+    i.email AS instructor_email,
+    d.name AS departement_name,
+    sa.code_salle,
+    sa.building AS salle_building,
+    sec.day_of_week,
+    sec.start_time,
+    sec.end_time
+FROM registration r
+JOIN student s ON r.student_id = s.student_id
+JOIN section sec ON r.section_id = sec.section_id
+JOIN course c ON sec.course_code = c.course_code
+JOIN instructor i ON sec.instructor_id = i.instructor_id
+JOIN departement d ON i.departement_id = d.departement_id
+JOIN salle sa ON sec.salle_id = sa.salle_id;
 /* =============================================
    4. TRIGGERS
    ============================================= */

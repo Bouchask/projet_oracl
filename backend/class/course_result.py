@@ -5,11 +5,13 @@ class course_result:
     def __init__(self, cnn):
         self.cnn = cnn
 
-    def insert_course_result(self, student_id: int, course_code: int, grade: str, status: str):
+   
+    def insert_course_result(self, student_id: int, course_code: int, grade: str):
         cur = self.cnn.cursor()
         try:
-            cur.execute("insert into course_result (student_id, course_code, grade, status) values (:1, :2, :3, :4)",
-                        (student_id, course_code, grade, status))
+            # Oracle Trigger will set status (PASS/NV) based on grade
+            cur.execute("insert into course_result (student_id, course_code, grade) values (:1, :2, :3)",
+                        (student_id, course_code, grade))
             self.cnn.commit()
             return True
         except Exception as e:
@@ -58,11 +60,12 @@ class course_result:
         finally:
             cur.close()
 
-    def update_course_result(self, result_id: int, new_grade: str, new_status: str):
+    
+    def update_course_result_grade(self, result_id: int, new_grade: str):
         cur = self.cnn.cursor()
         try:
-            cur.execute("update course_result set grade = :1, status = :2 where result_id = :3",
-                        (new_grade, new_status, result_id))
+            cur.execute("update course_result set grade = :1 where result_id = :2",
+                        (new_grade, result_id))
             self.cnn.commit()
             return True
         except Exception as e:
