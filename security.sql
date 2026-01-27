@@ -1,62 +1,57 @@
 /* =========================
    ROLES
 ========================= */
-
 CREATE ROLE role_admin;
-CREATE ROLE role_teacher;
-CREATE ROLE role_student;
+CREATE ROLE role_backend;
 
-/* =========================
-   ROLE_ADMIN PRIVILEGES
-========================= */
-
+-- GRANTS FOR ROLE_ADMIN
+GRANT SELECT, INSERT, UPDATE, DELETE ON yahya_admin.app_user TO role_admin;
 GRANT SELECT, INSERT, UPDATE, DELETE ON yahya_admin.student TO role_admin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON yahya_admin.instructor TO role_admin;
 GRANT SELECT, INSERT, UPDATE, DELETE ON yahya_admin.course TO role_admin;
 GRANT SELECT, INSERT, UPDATE, DELETE ON yahya_admin.section TO role_admin;
 GRANT SELECT, INSERT, UPDATE, DELETE ON yahya_admin.semester TO role_admin;
 GRANT SELECT, INSERT, UPDATE, DELETE ON yahya_admin.prerequisite TO role_admin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON yahya_admin.registration TO role_admin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON yahya_admin.course_result TO role_admin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON yahya_admin.salle TO role_admin;
 GRANT SELECT ON yahya_admin.v_section_capacity TO role_admin;
-GRANT SELECT ON yahya_admin.v_registration_details TO role_admin;
+GRANT SELECT ON yahya_admin.v_users_login TO role_admin;
 
-/* =========================
-   ROLE_TEACHER PRIVILEGES
-========================= */
+-- GRANTS FOR ROLE_BACKEND
+-- AUTH
+GRANT SELECT ON yahya_admin.app_user TO role_backend;
 
-GRANT SELECT ON yahya_admin.student TO role_teacher;
-GRANT SELECT ON yahya_admin.section TO role_teacher;
-GRANT INSERT, UPDATE ON yahya_admin.course_result TO role_teacher;
-GRANT SELECT ON yahya_admin.v_student_performance TO role_teacher;
+-- READ
+GRANT SELECT ON yahya_admin.student TO role_backend;
+GRANT SELECT ON yahya_admin.instructor TO role_backend;
+GRANT SELECT ON yahya_admin.course TO role_backend;
+GRANT SELECT ON yahya_admin.section TO role_backend;
+GRANT SELECT ON yahya_admin.semester TO role_backend;
+GRANT SELECT ON yahya_admin.salle TO role_backend;
+GRANT SELECT ON yahya_admin.v_section_capacity TO role_backend;
 
-/* =========================
-   ROLE_STUDENT PRIVILEGES
-========================= */
-
-GRANT SELECT ON yahya_admin.course TO role_student;
-GRANT SELECT ON yahya_admin.section TO role_student;
-GRANT INSERT ON yahya_admin.registration TO role_student;
-GRANT SELECT ON yahya_admin.v_section_capacity TO role_student;
-GRANT SELECT ON yahya_admin.v_registration_details TO role_student;
+-- WRITE (Controlled Logic)
+GRANT INSERT, UPDATE ON yahya_admin.registration TO role_backend;
+GRANT INSERT, UPDATE ON yahya_admin.course_result TO role_backend;
 
 /* =========================
    USERS
 ========================= */
+CREATE USER app_backend IDENTIFIED BY "Str0ng_Backend_P@ss"
+DEFAULT TABLESPACE users
+TEMPORARY TABLESPACE temp
+QUOTA UNLIMITED ON users;
 
-CREATE USER admin_user IDENTIFIED BY admin123;
-CREATE USER teacher_user IDENTIFIED BY teacher123;
-CREATE USER student_user IDENTIFIED BY student123;
+GRANT CREATE SESSION TO app_backend;
+GRANT role_backend TO app_backend;
 
-/* =========================
-   LOGIN PERMISSION
-========================= */
+-- Note: user 'app_user' table is created in db.sql
 
-GRANT CREATE SESSION TO admin_user;
-GRANT CREATE SESSION TO teacher_user;
-GRANT CREATE SESSION TO student_user;
+CREATE USER app_admin IDENTIFIED BY "Str0ng_Admin_P@ss"
+DEFAULT TABLESPACE users
+TEMPORARY TABLESPACE temp
+QUOTA UNLIMITED ON users;
 
-/* =========================
-   ASSIGN ROLES
-========================= */
-
-GRANT role_admin TO admin_user;
-GRANT role_teacher TO teacher_user;
-GRANT role_student TO student_user;
+GRANT CREATE SESSION TO app_admin;
+GRANT role_admin TO app_admin;
