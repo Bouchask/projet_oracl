@@ -1,7 +1,7 @@
 import cx_Oracle
 import logging
-from course import course
-from course_result import course_result
+from classes.course import course
+from classes.course_result import course_result
 
 class registration:
     def __init__(self, cnn):

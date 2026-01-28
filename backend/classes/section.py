@@ -127,17 +127,27 @@ class section:
     def get_all_section_details(self):
         cur = self.cnn.cursor()
         try:
+            # L-frontend kaytsnna had l-tartib b dbt:
+            # 0: id, 1: title, 2: sem, 3: prof, 4: salle, 5: day, 6: start, 7: end, 8: enrolled, 9: max
             cur.execute("""
-                SELECT course_title, semester_name, instructor_name, salle_code, 
-                       day_of_week, start_time, end_time, max_capacity 
+                SELECT 
+                    section_id, 
+                    course_title, 
+                    semester_name, 
+                    instructor_name, 
+                    salle_code, 
+                    day_of_week, 
+                    start_time, 
+                    end_time, 
+                    current_enrolled, 
+                    max_capacity 
                 FROM v_section_details
+                ORDER BY semester_name DESC, course_title
             """)
-            rows = cur.fetchall()
-            return rows
+            return cur.fetchall()
         except Exception as e:
-            self.cnn.rollback()
-            logging.error(f"Error in getting all section details: {e}")
-            return None
+            logging.error(f"Error get all sections: {e}")
+            return []
         finally:
             cur.close()
 

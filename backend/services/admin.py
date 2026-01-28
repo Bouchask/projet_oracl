@@ -125,3 +125,17 @@ class AdminService:
 
     def modify_student_grade(self, result_id, new_grade):
         return self.course_result.update_course_result_grade(result_id, new_grade)
+    def show_all_instructors(self):
+        return self.instructor.select_all_instructors() # Assure toi que cette méthode existe dans instructor.py
+
+    def show_all_courses(self):
+        return self.course.select_all_courses() # Assure toi que cette méthode existe dans course.py
+
+    def show_all_departments(self):
+        return self.departement.select_all_departements() # Assure toi que cette méthode existe dans departement.py
+
+    def show_all_semesters(self):
+        return self.semester.select_all_semesters() # Assure toi que cette méthode existe dans semester.py
+
+    def show_all_salles(self):
+        return self.salle.select_all_salles() # Assure toi que cette méthode existe dans salle.py

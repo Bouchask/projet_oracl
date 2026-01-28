@@ -1,6 +1,6 @@
 import cx_Oracle
 import logging
-from prerequisite import prerequisite
+from classes.prerequisite import prerequisite
 class course:
     def __init__(self, cnn):
         self.cnn = cnn

@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Université</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../static/style.css">
+    <style>
+        /* Style additionnel pour le gestionnaire d'inscriptions */
+        #registrationManager {
+            background-color: #f8f9fa;
+            border-left: 5px solid #3498db;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>🎓 Admin Panel</h2>
+        <button onclick="showSection('students')" class="active"><span>👨‍🎓</span> Étudiants</button>
+        <button onclick="showSection('teachers')"><span>👨‍🏫</span> Professeurs</button>
+        <button onclick="showSection('courses')"><span>📚</span> Cours</button>
+        <button onclick="showSection('departments')"><span>🏢</span> Départements</button>
+        <button onclick="showSection('semesters')"><span>⏳</span> Semestres</button>
+        <button onclick="showSection('salles')"><span>🚪</span> Salles</button>
+        <button onclick="showSection('sections')"><span>📅</span> Sections</button> 
+        <button onclick="showSection('audit')"><span>👁️</span> Audit Logs</button>
+        <button onclick="logout()" class="logout-btn"><span>🚪</span> Déconnexion</button>
+    </div>
+
+    <div class="main-content">
+        <div id="notification"></div>
+
+        <div id="students" class="section-view active">
+            <div class="header"><h1>Gestion des Étudiants</h1></div>
+            <div class="card">
+                <h3>Ajouter un Étudiant</h3>
+                <div class="form-grid">
+                    <div class="form-group"><label>Prénom</label><input type="text" id="std_fname"></div>
+                    <div class="form-group"><label>Nom</label><input type="text" id="std_lname"></div>
+                    <div class="form-group"><label>Email</label><input type="email" id="std_email"></div>
+                    <div class="form-group"><label>Niveau</label>
+                        <select id="std_level">
+                            <option value="LICENCE">Licence</option>
+                            <option value="MASTER">Master</option>
+                            <option value="DEUG">DEUG</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Mot de passe</label><input type="password" id="std_pass"></div>
+                </div>
+                <button class="btn-primary" onclick="addStudent()">Ajouter</button>
+            </div>
+            <div class="card">
+                <h3>Liste des Étudiants</h3>
+                <button class="btn-secondary" onclick="loadStudents()">Actualiser</button>
+                <div class="table-container">
+                    <table id="studentsTable">
+                        <thead><tr><th>Code</th><th>Nom</th><th>Email</th><th>Niveau</th><th>Action</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="teachers" class="section-view">
+            <div class="header"><h1>Gestion des Professeurs</h1></div>
+            <div class="card">
+                <h3>Ajouter un Professeur</h3>
+                <div class="form-grid">
+                    <div class="form-group"><label>Nom Complet</label><input type="text" id="prof_name"></div>
+                    <div class="form-group"><label>Email</label><input type="email" id="prof_email"></div>
+                    <div class="form-group"><label>Département</label>
+                        <select id="prof_dept"><option value="">Chargement...</option></select>
+                    </div>
+                    <div class="form-group"><label>Mot de passe</label><input type="password" id="prof_pass"></div>
+                </div>
+                <button class="btn-primary" onclick="addTeacher()">Ajouter le professeur</button>
+            </div>
+            <div class="card">
+                <h3>Liste des Professeurs</h3>
+                <button class="btn-secondary" onclick="loadTeachers()">Actualiser</button>
+                <div class="table-container">
+                    <table id="teachersTable">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Code</th> <th>Nom</th>
+            <th>Email</th>
+            <th>Département</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+                </div>
+            </div>
+        </div>
+
+        <div id="courses" class="section-view">
+            <div class="header"><h1>Gestion des Cours</h1></div>
+            <div class="card">
+                <h3>Ajouter un Cours</h3>
+                <div class="form-grid">
+                    <div class="form-group"><label>Titre</label><input type="text" id="course_title"></div>
+                    <div class="form-group"><label>Crédits</label><input type="number" id="course_credits"></div>
+                </div>
+                <button class="btn-primary" onclick="addCourse()">Ajouter</button>
+            </div>
+            <div class="card">
+                <h3>Liste des Cours</h3>
+                <button class="btn-secondary" onclick="loadCourses()">Actualiser</button>
+                <div class="table-container">
+                    <table id="coursesTable">
+                        <thead><tr><th>ID</th><th>Titre</th><th>Crédits</th><th>Action</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="departments" class="section-view">
+            <div class="header"><h1>Gestion des Départements</h1></div>
+            <div class="card">
+                <h3>Ajouter un Département</h3>
+                <div class="form-group"><label>Nom</label><input type="text" id="dept_name"></div>
+                <button class="btn-primary" onclick="addDepartment()">Ajouter</button>
+            </div>
+            <div class="card">
+                <h3>Liste</h3>
+                <button class="btn-secondary" onclick="loadDepartments()">Actualiser</button>
+                <div class="table-container">
+                    <table id="departmentsTable"><thead><tr><th>ID</th><th>Nom</th><th>Action</th></tr></thead><tbody></tbody></table>
+                </div>
+            </div>
+        </div>
+
+        <div id="semesters" class="section-view">
+            <div class="header"><h1>Gestion des Semestres</h1></div>
+            <div class="card">
+                <h3>Ajouter Semestre</h3>
+                <div class="form-grid">
+                    <div class="form-group"><label>Nom</label><input type="text" id="sem_name"></div>
+                    <div class="form-group"><label>Début</label><input type="date" id="sem_start"></div>
+                    <div class="form-group"><label>Fin</label><input type="date" id="sem_end"></div>
+                </div>
+                <button class="btn-primary" onclick="addSemester()">Ajouter</button>
+            </div>
+            <div class="card">
+                <h3>Liste</h3>
+                <button class="btn-secondary" onclick="loadSemesters()">Actualiser</button>
+                <div class="table-container">
+                    <table id="semestersTable"><thead><tr><th>ID</th><th>Nom</th><th>Dates</th></tr></thead><tbody></tbody></table>
+                </div>
+            </div>
+        </div>
+
+        <div id="salles" class="section-view">
+            <div class="header"><h1>Gestion des Salles</h1></div>
+            <div class="card">
+                <h3>Ajouter Salle</h3>
+                <div class="form-grid">
+                    <div class="form-group"><label>Code</label><input type="text" id="salle_code"></div>
+                    <div class="form-group"><label>Capacité</label><input type="number" id="salle_cap"></div>
+                    <div class="form-group"><label>Bâtiment</label><input type="text" id="salle_build"></div>
+                </div>
+                <button class="btn-primary" onclick="addSalle()">Ajouter</button>
+            </div>
+            <div class="card">
+                <h3>Liste</h3>
+                <button class="btn-secondary" onclick="loadSalles()">Actualiser</button>
+                <div class="table-container">
+                    <table id="sallesTable"><thead><tr><th>ID</th><th>Code</th><th>Cap.</th><th>Bât.</th></tr></thead><tbody></tbody></table>
+                </div>
+            </div>
+        </div>
+
+        <div id="sections" class="section-view">
+            <div class="header"><h1>Gestion des Sections & Inscriptions</h1></div>
+            
+            <div class="card">
+                <h3>Créer une Section</h3>
+                <div class="form-grid">
+                    <div class="form-group"><label>Cours</label><select id="sec_course"><option>Chargement...</option></select></div>
+                    <div class="form-group"><label>Semestre</label><select id="sec_sem"><option>Chargement...</option></select></div>
+                    <div class="form-group"><label>Professeur</label><select id="sec_prof"><option>Chargement...</option></select></div>
+                    <div class="form-group"><label>Salle</label><select id="sec_salle"><option>Chargement...</option></select></div>
+                    <div class="form-group"><label>Jour</label>
+                        <select id="sec_day">
+                            <option value="Lundi">Lundi</option><option value="Mardi">Mardi</option>
+                            <option value="Mercredi">Mercredi</option><option value="Jeudi">Jeudi</option>
+                            <option value="Vendredi">Vendredi</option><option value="Samedi">Samedi</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Début (HH:MM)</label><input type="time" id="sec_start"></div>
+                    <div class="form-group"><label>Fin (HH:MM)</label><input type="time" id="sec_end"></div>
+                    <div class="form-group"><label>Capacité</label><input type="number" id="sec_cap" value="30"></div>
+                </div>
+                <button class="btn-primary" onclick="addSection()">Créer Section</button>
+            </div>
+
+            <div class="card">
+                <h3>Liste des Sections</h3>
+                <button class="btn-secondary" onclick="loadSections()">Actualiser</button>
+                <div class="table-container">
+                    <table id="sectionsTable">
+                        <thead>
+                            <tr>
+                                <th>Cours</th><th>Semestre</th><th>Prof</th><th>Salle</th>
+                                <th>Horaire</th><th>Inscrits</th><th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="registrationManager" style="display:none;">
+                <h3 id="regTitle" style="color: #2c3e50;">Inscriptions</h3>
+                <div style="margin-bottom: 10px;">
+                    <button class="btn-danger" onclick="closeRegManager()">Fermer</button>
+                </div>
+                <div class="table-container">
+                    <table id="regTable">
+                        <thead><tr><th>Etudiant</th><th>Code Apogée</th><th>Date</th><th>Statut</th><th>Action</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="audit" class="section-view">
+            <div class="header"><h1>Audit Logs</h1></div>
+            <div class="card">
+                <button class="btn-primary" onclick="loadAudit()">Charger les Logs</button>
+                <div class="table-container">
+                    <table id="auditTable"><thead><tr><th>ID</th><th>Etudiant</th><th>Cours</th><th>Avant</th><th>Après</th><th>Date</th></tr></thead><tbody></tbody></table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:5000/api";
+
+        window.onload = () => {
+            // Charge les données initiales
+            loadStudents();
+            loadDeptDropdown(); 
+        };
+
+        function showSection(id) {
+            document.querySelectorAll('.section-view').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(id).classList.add('active');
+            
+            // Trouver le bouton cliqué pour le mettre actif
+            const buttons = document.querySelectorAll('.sidebar button');
+            buttons.forEach(btn => {
+                if(btn.getAttribute('onclick').includes(id)) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Logic de chargement automatique
+            if(id === 'students') loadStudents();
+            if(id === 'teachers') { loadTeachers(); loadDeptDropdown(); }
+            if(id === 'courses') loadCourses();
+            if(id === 'departments') loadDepartments();
+            if(id === 'semesters') loadSemesters();
+            if(id === 'salles') loadSalles();
+            if(id === 'audit') loadAudit();
+            if(id === 'sections') { loadSections(); loadSectionDropdowns(); }
+        }
+
+        function showNotify(msg, isError = false) {
+            const notif = document.getElementById('notification');
+            notif.textContent = msg;
+            notif.style.backgroundColor = isError ? '#e74c3c' : '#2ecc71';
+            notif.style.display = 'block';
+            setTimeout(() => notif.style.display = 'none', 3000);
+        }
+
+        async function fetchAPI(endpoint, method="GET", body=null) {
+            try {
+                const options = { method: method, headers: {'Content-Type': 'application/json'} };
+                if (body) options.body = JSON.stringify(body);
+                const res = await fetch(`${API_URL}${endpoint}`, options);
+                return await res.json();
+            } catch (err) { console.error(err); return {error: "Erreur connexion serveur"}; }
+        }
+
+        /* --- STUDENTS --- */
+        async function loadStudents() {
+            const data = await fetchAPI('/admin/students');
+            const tbody = document.querySelector("#studentsTable tbody");
+            tbody.innerHTML = "";
+            if(data && !data.error) data.forEach(std => {
+                tbody.innerHTML += `<tr><td>${std[1]}</td><td>${std[2]} ${std[3]}</td><td>${std[4]}</td><td>${std[5]}</td><td><button class="btn-danger">X</button></td></tr>`;
+            });
+        }
+        async function addStudent() {
+            const body = {
+                first_name: document.getElementById('std_fname').value,
+                last_name: document.getElementById('std_lname').value,
+                email: document.getElementById('std_email').value,
+                level: document.getElementById('std_level').value,
+                password: document.getElementById('std_pass').value
+            };
+            const res = await fetchAPI('/admin/student', 'POST', body);
+            if(res && !res.error) { showNotify("Etudiant ajouté"); loadStudents(); } 
+            else showNotify("Erreur: " + res.error, true);
+        }
+
+        /* --- TEACHERS --- */
+        async function loadDeptDropdown() {
+            const data = await fetchAPI('/admin/departments');
+            const select = document.getElementById('prof_dept');
+            select.innerHTML = '<option value="" disabled selected>Choisir...</option>';
+            if(data && !data.error) data.forEach(d => {
+                select.innerHTML += `<option value="${d[0]}">${d[1]}</option>`;
+            });
+        }
+        async function loadTeachers() {
+            const data = await fetchAPI('/admin/teachers');
+            const tbody = document.querySelector("#teachersTable tbody");
+            tbody.innerHTML = "";
+            if(data && !data.error) data.forEach(t => {
+                tbody.innerHTML += `<tr><td>${t[0]}</td><td><strong>${t[1]}</strong></td><td>${t[2]}</td><td>${t[3]}</td><td>${t[4]}</td><td><button class="btn-danger">X</button></td></tr>`;
+            });
+        }
+        async function addTeacher() {
+            const body = {
+                name: document.getElementById('prof_name').value,
+                email: document.getElementById('prof_email').value,
+                dept_id: document.getElementById('prof_dept').value,
+                password: document.getElementById('prof_pass').value
+            };
+            const res = await fetchAPI('/admin/teacher', 'POST', body);
+            if(res && !res.error) { showNotify("Professeur ajouté"); loadTeachers(); } 
+            else showNotify("Erreur: " + res.error, true);
+        }
+
+        /* --- COURSES --- */
+        async function loadCourses() {
+            const data = await fetchAPI('/admin/courses');
+            const tbody = document.querySelector("#coursesTable tbody");
+            tbody.innerHTML = "";
+            if(data && !data.error) data.forEach(c => {
+                tbody.innerHTML += `<tr><td>${c[0]}</td><td>${c[1]}</td><td>${c[2]}</td><td><button class="btn-danger">X</button></td></tr>`;
+            });
+        }
+        async function addCourse() {
+            const body = { title: document.getElementById('course_title').value, credits: document.getElementById('course_credits').value };
+            const res = await fetchAPI('/admin/course', 'POST', body);
+            if(res && !res.error) { showNotify("Cours ajouté"); loadCourses(); }
+        }
+
+        /* --- DEPARTMENTS --- */
+        async function loadDepartments() {
+            const data = await fetchAPI('/admin/departments');
+            const tbody = document.querySelector("#departmentsTable tbody");
+            tbody.innerHTML = "";
+            if(data && !data.error) data.forEach(d => tbody.innerHTML += `<tr><td>${d[0]}</td><td>${d[1]}</td><td><button class="btn-danger">X</button></td></tr>`);
+        }
+        async function addDepartment() {
+            const res = await fetchAPI('/admin/departement', 'POST', { name: document.getElementById('dept_name').value });
+            if(res && !res.error) { showNotify("Département ajouté"); loadDepartments(); }
+        }
+
+        /* --- SEMESTERS --- */
+        async function loadSemesters() {
+            const data = await fetchAPI('/admin/semesters');
+            const tbody = document.querySelector("#semestersTable tbody");
+            tbody.innerHTML = "";
+            if(data && !data.error) data.forEach(s => tbody.innerHTML += `<tr><td>${s[0]}</td><td>${s[1]}</td><td>${s[2]} - ${s[3]}</td></tr>`);
+        }
+        async function addSemester() {
+            const body = { 
+                name: document.getElementById('sem_name').value, 
+                start_date: document.getElementById('sem_start').value, 
+                end_date: document.getElementById('sem_end').value 
+            };
+            const res = await fetchAPI('/admin/semester', 'POST', body);
+            if(res && !res.error) { showNotify("Semestre ajouté"); loadSemesters(); }
+        }
+
+        /* --- SALLES --- */
+        async function loadSalles() {
+            const data = await fetchAPI('/admin/salles');
+            const tbody = document.querySelector("#sallesTable tbody");
+            tbody.innerHTML = "";
+            if(data && !data.error) data.forEach(s => tbody.innerHTML += `<tr><td>${s[0]}</td><td>${s[1]}</td><td>${s[2]}</td><td>${s[3]}</td></tr>`);
+        }
+        async function addSalle() {
+            const body = { 
+                code: document.getElementById('salle_code').value, 
+                capacity: document.getElementById('salle_cap').value, 
+                building: document.getElementById('salle_build').value 
+            };
+            const res = await fetchAPI('/admin/salle', 'POST', body);
+            if(res && !res.error) { showNotify("Salle ajoutée"); loadSalles(); }
+        }
+
+        /* --- AUDIT --- */
+        async function loadAudit() {
+            const data = await fetchAPI('/admin/audit');
+            const tbody = document.querySelector("#auditTable tbody");
+            tbody.innerHTML = "";
+            if(data && !data.error) data.forEach(log => tbody.innerHTML += `<tr><td>${log[0]}</td><td>${log[1]}</td><td>${log[2]}</td><td>${log[3]}</td><td>${log[4]}</td><td>${log[5]}</td></tr>`);
+        }
+
+        /* --- GESTION SECTIONS & INSCRIPTIONS (NOUVEAU) --- */
+        async function loadSectionDropdowns() {
+            const courses = await fetchAPI('/admin/courses');
+            const sems = await fetchAPI('/admin/semesters');
+            const profs = await fetchAPI('/admin/teachers');
+            const salles = await fetchAPI('/admin/salles');
+
+            populateSelect('sec_course', courses, 0, 1);
+            populateSelect('sec_sem', sems, 0, 1);
+            populateSelect('sec_prof', profs, 0, 2); // Profs: ID, Code, Name (Index 2)
+            populateSelect('sec_salle', salles, 0, 1);
+        }
+
+        function populateSelect(id, data, valIdx, textIdx) {
+            const el = document.getElementById(id);
+            el.innerHTML = "";
+            if(data && !data.error) data.forEach(item => {
+                el.innerHTML += `<option value="${item[valIdx]}">${item[textIdx]}</option>`;
+            });
+        }
+
+        async function loadSections() {
+            const data = await fetchAPI('/admin/sections');
+            const tbody = document.querySelector("#sectionsTable tbody");
+            tbody.innerHTML = "";
+            if(data && !data.error) data.forEach(s => {
+                // s: [id, title, sem, prof, salle, day, start, end, enrolled, max]
+                const timeStr = `${s[5]} ${new Date(s[6]).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${new Date(s[7]).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${s[1]}</td>
+                        <td>${s[2]}</td>
+                        <td>${s[3]}</td>
+                        <td>${s[4]}</td>
+                        <td>${timeStr}</td>
+                        <td>${s[8]} / ${s[9]}</td>
+                        <td>
+                            <button class="btn-secondary" onclick="manageRegistrations(${s[0]}, '${s[1]}')">Gérer Inscr.</button>
+                            <button class="btn-danger" onclick="deleteSection(${s[0]})">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function addSection() {
+            // Création de date bidon pour le backend (Seul l'heure compte pour l'affichage)
+            const day = "2026-01-01"; 
+            const start = `${day} ${document.getElementById('sec_start').value}:00`;
+            const end = `${day} ${document.getElementById('sec_end').value}:00`;
+
+            const body = {
+                course_code: document.getElementById('sec_course').value,
+                semester_id: document.getElementById('sec_sem').value,
+                instructor_id: document.getElementById('sec_prof').value,
+                salle_id: document.getElementById('sec_salle').value,
+                capacity: document.getElementById('sec_cap').value,
+                day: document.getElementById('sec_day').value,
+                start: start,
+                end: end
+            };
+
+            const res = await fetchAPI('/admin/section', 'POST', body);
+            if(res && !res.error) { showNotify("Section créée"); loadSections(); }
+            else showNotify("Erreur: " + res.error, true);
+        }
+
+        async function deleteSection(id) {
+            if(!confirm("Supprimer cette section ?")) return;
+            const res = await fetchAPI(`/admin/section/${id}`, 'DELETE');
+            if(res && !res.error) { showNotify("Section supprimée"); loadSections(); }
+            else showNotify("Erreur: " + (res.error || "Impossible de supprimer"), true);
+        }
+
+        async function manageRegistrations(secId, title) {
+            document.getElementById('registrationManager').style.display = 'block';
+            document.getElementById('regTitle').innerText = `Inscriptions : ${title}`;
+            
+            const data = await fetchAPI(`/admin/section/${secId}/registrations`);
+            const tbody = document.querySelector("#regTable tbody");
+            tbody.innerHTML = "";
+            
+            if(data && !data.error) {
+                if(data.length === 0) tbody.innerHTML = "<tr><td colspan='5'>Aucune inscription</td></tr>";
+                data.forEach(r => {
+                    // r: [reg_id, fname, lname, code, status, date]
+                    let actions = "";
+                    if(r[4] === 'ACTIVE') {
+                        actions = `<button class="btn-danger" onclick="updateStatus(${r[0]}, 'CANCELLED', ${secId}, '${title}')">Annuler</button>`;
+                    } else {
+                        actions = `<button class="btn-primary" onclick="updateStatus(${r[0]}, 'ACTIVE', ${secId}, '${title}')">Accepter</button>`;
+                    }
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${r[1]} ${r[2]}</td>
+                            <td>${r[3]}</td>
+                            <td>${new Date(r[5]).toLocaleDateString()}</td>
+                            <td><strong>${r[4]}</strong></td>
+                            <td>${actions}</td>
+                        </tr>
+                    `;
+                });
+            }
+            document.getElementById('registrationManager').scrollIntoView({behavior: 'smooth'});
+        }
+
+        async function updateStatus(regId, status, secId, title) {
+            const body = { registration_id: regId, status: status };
+            const res = await fetchAPI('/admin/registration/status', 'PUT', body);
+            if(res && !res.error) { 
+                showNotify("Statut mis à jour"); 
+                manageRegistrations(secId, title); // Refresh table
+            } else {
+                showNotify("Erreur", true);
+            }
+        }
+
+        function closeRegManager() {
+            document.getElementById('registrationManager').style.display = 'none';
+        }
+
+        function logout() { window.location.href = "login.html"; }
+    </script>
+</body>
+</html>

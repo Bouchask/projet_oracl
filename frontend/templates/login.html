@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Université</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="login-bg">
+
+    <div class="login-container">
+        <h2>Bienvenue</h2>
+        
+        <select id="role">
+            <option value="" disabled selected>-- Sélectionnez votre rôle --</option>
+            <option value="ADMIN">Administrateur</option>
+            <option value="TEACHER">Professeur</option>
+            <option value="STUDENT">Étudiant</option>
+        </select>
+
+        <input type="text" id="code_apoge" placeholder="Code Apogée / Identifiant">
+        <input type="password" id="password" placeholder="Mot de passe">
+
+        <button onclick="handleLogin()">Se Connecter</button>
+        
+        <p id="error-message" class="error-msg"></p>
+    </div>
+
+    <script>
+        // L'URL du Backend (API)
+        const BACKEND_URL = "http://localhost:5000/api";
+
+        async function handleLogin() {
+            const role = document.getElementById('role').value;
+            const code = document.getElementById('code_apoge').value;
+            const pass = document.getElementById('password').value;
+            const errDiv = document.getElementById('error-message');
+
+            // Validation simple
+            if (!role) {
+                showError("Veuillez sélectionner un rôle.");
+                return;
+            }
+            if (!code || !pass) {
+                showError("Veuillez remplir tous les champs.");
+                return;
+            }
+
+            try {
+                // 1. Appel au Backend
+                const response = await fetch(`${BACKEND_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        role: role,
+                        code_apoge: code,
+                        password: pass
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // 2. Stockage des infos (localStorage pour garder la session)
+                    localStorage.setItem('user_role', data.role);
+                    localStorage.setItem('user_code', data.code_apoge); // Admin peut être null ici
+                    
+                    // 3. Redirection vers le bon Dashboard (Frontend Routes)
+                    if (role === 'ADMIN') {
+                        window.location.href = "/admin";
+                    } else if (role === 'TEACHER') {
+                        // TODO: Créer dashboard_teacher.html plus tard
+                        alert("Dashboard Professeur (À implémenter)");
+                        // window.location.href = "/teacher";
+                    } else if (role === 'STUDENT') {
+                        // TODO: Créer dashboard_student.html plus tard
+                        alert("Dashboard Étudiant (À implémenter)");
+                        // window.location.href = "/student";
+                    }
+                } else {
+                    showError(data.error || "Échec de la connexion");
+                }
+
+            } catch (error) {
+                console.error(error);
+                showError("Erreur de connexion au serveur.");
+            }
+        }
+
+        function showError(msg) {
+            const errDiv = document.getElementById('error-message');
+            errDiv.textContent = msg;
+            errDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
