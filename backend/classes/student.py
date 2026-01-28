@@ -276,3 +276,11 @@ class student:
             return []
         finally:
             cur.close()
+    def count_students(self):
+        cur = self.cnn.cursor()
+        try:
+            cur.execute("SELECT COUNT(*) FROM student")
+            res = cur.fetchone()
+            return res[0] if res else 0
+        except: return 0
+        finally: cur.close()

@@ -180,3 +180,34 @@ class section:
             return False
         finally:
             cur.close()
+    def count_sections(self):
+        cur = self.cnn.cursor()
+        try:
+            cur.execute("SELECT COUNT(*) FROM section")
+            res = cur.fetchone()
+            return res[0] if res else 0
+        except: return 0
+        finally: cur.close()
+    def block_section_enrollment(self, section_id):
+        """ 
+        Bloque les inscriptions en mettant la capacité maximale 
+        égale au nombre actuel d'inscrits.
+        """
+        cur = self.cnn.cursor()
+        try:
+            # 1. Récupérer le nombre actuel d'inscrits via la vue
+            cur.execute("SELECT current_enrolled FROM v_section_details WHERE section_id = :1", (section_id,))
+            res = cur.fetchone()
+            if not res: return False
+            
+            current_enrolled = res[0]
+            
+            # 2. Mettre à jour la capacité max
+            cur.execute("UPDATE section SET max_capacity = :1 WHERE section_id = :2", (current_enrolled, section_id))
+            self.cnn.commit()
+            return True
+        except Exception as e:
+            self.cnn.rollback()
+            return False
+        finally:
+            cur.close()

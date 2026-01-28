@@ -159,3 +159,14 @@ class instructor:
             return []
         finally:
             cur.close()
+    def count_instructors(self):
+        cur = self.cnn.cursor()
+        try:
+            cur.execute("SELECT COUNT(*) FROM instructor")
+            res = cur.fetchone()
+            return res[0] if res else 0
+        except: return 0
+        finally: cur.close()
+    def update_password_instructor(self, new_password, code_apoge):
+        
+        return self.app_user_manager.update_app_user_password(code_apoge, new_password)

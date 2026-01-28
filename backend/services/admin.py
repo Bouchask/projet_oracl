@@ -1,13 +1,9 @@
 import logging
-from datetime import datetime
 
 class AdminService:
     def __init__(self, cnn, student_mgr, instructor_mgr, course_mgr, section_mgr, 
                  registration_mgr, departement_mgr, salle_mgr, semester_mgr, 
                  course_result_mgr, prerequisite_mgr, grades_audit_mgr):
-        """
-        L'AdminService centralise tous les managers pour effectuer les tâches administratives.
-        """
         self.cnn = cnn
         self.student = student_mgr
         self.instructor = instructor_mgr
@@ -21,121 +17,89 @@ class AdminService:
         self.prerequisite = prerequisite_mgr
         self.grades_audit = grades_audit_mgr
 
-    # =========================================================
-    # 1. GESTION DES ETUDIANTS
-    # =========================================================
-    def add_student(self, first_name, last_name, email, level, password):
-        return self.student.insert_student(first_name, last_name, email, level, password)
+    # ==========================================
+    # 1. STATISTIQUES (Pour Dashboard)
+    # ==========================================
+    def get_dashboard_stats(self):
+        # On utilise try/except au cas où une classe n'a pas encore la fonction count
+        stats = {"students": 0, "instructors": 0, "courses": 0, "sections": 0}
+        try: stats["students"] = self.student.count_students()
+        except: pass
+        try: stats["instructors"] = self.instructor.count_instructors()
+        except: pass
+        try: stats["courses"] = self.course.count_courses()
+        except: pass
+        try: stats["sections"] = self.section.count_sections()
+        except: pass
+        return stats
 
-    def drop_student(self, code_apoge):
-        # Note: Assurez-vous que la méthode s'appelle 'deleted_student' ou 'delete_student' dans votre manager
-        return self.student.deleted_student(code_apoge)
+    # ==========================================
+    # 2. DROP FUNCTIONS (Suppression)
+    # ==========================================
+    def drop_student(self, code): return self.student.deleted_student(code)
+    def drop_instructor(self, code): return self.instructor.deleted_instructor(code)
+    def drop_course(self, title): return self.course.delete_course(title)
+    
+    def drop_departement(self, name): return self.departement.delete_departement(name)
+    def drop_semester(self, name): return self.semester.delete_semester(name)
+    def drop_salle(self, code): return self.salle.delete_salle(code)
+    def drop_section(self, sid): return self.section.delete_section(sid)
 
-    def modify_student_password(self, code_apoge, new_password):
-        return self.student.update_password_student(new_password, code_apoge)
+    # ==========================================
+    # 3. LISTS & ADDS
+    # ==========================================
+    def show_all_students(self): return self.student.select_AllStudent()
+    def add_student(self, f, l, e, lvl, p): return self.student.insert_student(f, l, e, lvl, p)
 
-    def modify_student_academic_level(self, code_apoge, new_level):
-        """ Change le niveau (ex: LICENCE -> MASTER) """
-        return self.student.update_academic_level_student(new_level, code_apoge)
+    def show_all_instructors(self): return self.instructor.select_all_instructors()
+    def add_instructor(self, n, e, d, p): return self.instructor.insert_instructor(n, e, d, p)
 
-    def show_all_students(self):
-        return self.student.select_AllStudent()
+    def show_all_courses(self): return self.course.select_all_courses()
+    def add_course(self, t, c): return self.course.insert_course(t, c)
 
-    # =========================================================
-    # 2. GESTION DES PROFESSEURS (Instructors)
-    # =========================================================
-    def add_instructor(self, name, email, dept_id, password):
-        return self.instructor.insert_instructor(name, email, dept_id, password)
+    def show_all_departments(self): return self.departement.select_all_departements()
+    def add_departement(self, n): return self.departement.insert_departement(n)
 
-    def drop_instructor(self, code_apoge):
-        # Vérifiez le nom de la méthode dans instructor.py (deleted_instructor ou delete_instructor)
-        return self.instructor.deleted_instructor(code_apoge)
+    def show_all_semesters(self): return self.semester.select_all_semesters()
+    def add_semester(self, n, s, e): return self.semester.insert_semester(n, s, e)
 
-    def modify_instructor_dept(self, code_apoge, new_dept_id):
-        return self.instructor.update_departement_instructor(new_dept_id, code_apoge)
+    def show_all_salles(self): return self.salle.select_all_salles()
+    def add_salle(self, c, cap, b): return self.salle.insert_salle(c, cap, b)
 
-    # =========================================================
-    # 3. GESTION DES SECTIONS (Emploi du temps)
-    # =========================================================
-    def show_sections(self):
-        return self.section.get_all_section_details()
+    # Sections
+    def show_sections(self): return self.section.get_all_section_details()
+    def add_section(self, c, s, i, sa, cap, d, st, en): return self.section.insert_section(c, s, i, sa, cap, d, st, en)
 
-    def add_section(self, course_code, semester_id, instructor_id, salle_id, capacity, day, start, end):
-        return self.section.insert_section(course_code, semester_id, instructor_id, salle_id, capacity, day, start, end)
+    # Inscriptions
+    def show_section_registrations(self, sid): return self.registration.get_registrations_by_section(sid)
+    def change_registration_status(self, rid, st): return self.registration.update_registration_status(rid, st)
 
-    def drop_section(self, section_id):
-        return self.section.delete_section(section_id)
+    # Audit
+    def show_audit_logs(self): return self.grades_audit.select_all_audits() if self.grades_audit else []
 
-    # Mise à jour granulaire (Une seule info à la fois)
-    def update_section_instructor(self, section_id, new_instructor_id):
-        return self.section.update_section_instructor(section_id, new_instructor_id)
+    # --- MODIFICATIONS UTILISATEURS ---
+    def modify_teacher_password(self, code_apoge, new_password):
+        return self.instructor.update_password_instructor(new_password, code_apoge)
 
-    def update_section_salle(self, section_id, new_salle_id):
-        return self.section.update_section_salle(section_id, new_salle_id)
+    # --- MODIFICATIONS COURS & STRUCTURE ---
+    def modify_course_credits(self, title, new_credits):
+        return self.course.update_course_(title, new_credits) # Note: typo update_course_ dans votre course.py
 
-    def update_section_time(self, section_id, new_start, new_end):
-        return self.section.update_section_time(section_id, new_start, new_end)
+    def modify_departement_name(self, old_name, new_name):
+        return self.departement.update_departement_name(old_name, new_name)
 
-    # =========================================================
-    # 4. GESTION DES INSCRIPTIONS (Registration)
-    # =========================================================
-    def show_registrations(self):
-        return self.registration.get_all_registration_details()
+    def modify_semester_name(self, old_name, new_name):
+        return self.semester.update_semester_name(old_name, new_name)
 
-    def accept_registration(self, registration_id):
-        return self.registration.update_registration_status(registration_id, 'ACTIVE')
+    def modify_salle_capacity(self, code, new_cap):
+        return self.salle.update_salle_capacity(code, new_cap)
 
-    def cancel_registration(self, registration_id):
-        return self.registration.update_registration_status(registration_id, 'CANCELLED')
+    # --- MODIFICATIONS SECTION & BLOQUAGE ---
+    def modify_section_prof(self, sec_id, prof_id):
+        return self.section.update_section_instructor(sec_id, prof_id)
 
-    # =========================================================
-    # 5. GESTION COURS & PREREQUIS
-    # =========================================================
-    def add_course(self, title, credits):
-        return self.course.insert_course(title, credits)
+    def modify_section_salle(self, sec_id, salle_id):
+        return self.section.update_section_salle(sec_id, salle_id)
 
-    def drop_course(self, title):
-        return self.course.delete_course(title)
-
-    def add_prerequisite(self, course_code, prereq_code, min_grade):
-        return self.prerequisite.insert_prerequisite(course_code, prereq_code, min_grade)
-
-    # =========================================================
-    # 6. GESTION SALLES & DEPARTEMENTS & SEMESTRES
-    # =========================================================
-    def add_salle(self, code, capacity, building):
-        return self.salle.insert_salle(code, capacity, building)
-
-    def add_departement(self, name):
-        return self.departement.insert_departement(name)
-        
-    def add_semester(self, name, start, end):
-        return self.semester.insert_semester(name, start, end)
-
-    # =========================================================
-    # 7. GESTION RESULTATS & AUDIT
-    # =========================================================
-    def show_audit_logs(self):
-        """ Affiche l'historique des modifications de notes """
-        # Assurez-vous d'avoir ajouté select_audit_details dans grades_audit.py
-        if hasattr(self.grades_audit, 'select_audit_details'):
-            return self.grades_audit.select_audit_details()
-        else:
-            return self.grades_audit.select_all_audits()
-
-    def modify_student_grade(self, result_id, new_grade):
-        return self.course_result.update_course_result_grade(result_id, new_grade)
-    def show_all_instructors(self):
-        return self.instructor.select_all_instructors() # Assure toi que cette méthode existe dans instructor.py
-
-    def show_all_courses(self):
-        return self.course.select_all_courses() # Assure toi que cette méthode existe dans course.py
-
-    def show_all_departments(self):
-        return self.departement.select_all_departements() # Assure toi que cette méthode existe dans departement.py
-
-    def show_all_semesters(self):
-        return self.semester.select_all_semesters() # Assure toi que cette méthode existe dans semester.py
-
-    def show_all_salles(self):
-        return self.salle.select_all_salles() # Assure toi que cette méthode existe dans salle.py
+    def block_section(self, sec_id):
+        return self.section.block_section_enrollment(sec_id)

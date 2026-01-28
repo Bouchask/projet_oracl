@@ -94,3 +94,11 @@ class course:
                 return False
         else : 
             return False
+    def count_courses(self):
+        cur = self.cnn.cursor()
+        try:
+            cur.execute("SELECT COUNT(*) FROM course")
+            res = cur.fetchone()
+            return res[0] if res else 0
+        except: return 0
+        finally: cur.close()

@@ -50,3 +50,11 @@ class semester:
             return False
         finally:
             cur.close()
+    def update_semester_name(self, old_name, new_name):
+        cur = self.cnn.cursor()
+        try:
+            cur.execute("UPDATE semester SET name = :1 WHERE name = :2", (new_name, old_name))
+            self.cnn.commit()
+            return True
+        except: return False
+        finally: cur.close()

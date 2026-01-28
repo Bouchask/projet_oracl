@@ -71,3 +71,18 @@ class salle:
             return False
         finally:
             cur.close()
+    def count_salles(self):
+        cur = self.cnn.cursor()
+        try:
+            cur.execute("SELECT COUNT(*) FROM salle")
+            res = cur.fetchone()
+            return res[0] if res else 0
+        finally: cur.close()
+    def update_salle_capacity(self, code_salle, new_capacity):
+        cur = self.cnn.cursor()
+        try:
+            cur.execute("UPDATE salle SET capacity = :1 WHERE code = :2", (new_capacity, code_salle))
+            self.cnn.commit()
+            return True
+        except: return False
+        finally: cur.close()

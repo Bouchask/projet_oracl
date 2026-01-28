@@ -82,3 +82,4 @@ class StudentService:
             return self.student.get_transcript_grouped(code_apoge)
         else:
             return self.student.get_student_transcript(code_apoge)
+    

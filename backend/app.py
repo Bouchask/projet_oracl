@@ -1,25 +1,17 @@
-from flask import Flask, request, jsonify, g
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import cx_Oracle
 import logging
 import platform
-import os
-from datetime import datetime  # <--- IMPORTANTE
+from datetime import datetime
 
-# ==========================================
-# 1. FIX WINDOWS (Instant Client)
-# ==========================================
+# INIT
 try:
     if platform.system() == "Windows":
-        # Check path dyalk
         cx_Oracle.init_oracle_client(lib_dir=r"C:\oracle\instantclient_23_0")
-except Exception as e:
-    print("Info: Oracle Client déjà initialisé ou erreur non bloquante:", e)
-    pass
+except: pass
 
-# ==========================================
-# 2. IMPORTS DES CLASSES (DAOs)
-# ==========================================
+# IMPORTS
 from classes.student import student
 from classes.instructor import instructor
 from classes.course import course
@@ -31,322 +23,349 @@ from classes.semester import semester
 from classes.course_result import course_result
 from classes.prerequisite import prerequisite
 from classes.app_user import app_user
+try: from classes.grades_audit import grades_audit
+except: grades_audit = None
 
-try:
-    from classes.grades_audit import grades_audit
-except ImportError:
-    grades_audit = None
-
-# ==========================================
-# 3. IMPORTS DES SERVICES
-# ==========================================
 from services.admin import AdminService
 from services.student import StudentService
 from services.teacher import TeacherService
-
-# ==========================================
-# 4. IMPORT CONNECTION
-# ==========================================
 from connection.db import db
 
 app = Flask(__name__)
-CORS(app) 
-
+CORS(app)
 logging.basicConfig(level=logging.INFO)
 
-# ==========================================
-# 5. CONFIGURATION ORACLE
-# ==========================================
 ORACLE_CONFIG = {
-    'ADMIN': {
-        'user': 'yahya_admin', 
-        'password': '123', 
-        'dsn': cx_Oracle.makedsn('localhost', 1521, service_name='ORCLCDB')
-    },
-    'TEACHER': {
-        'user': 'user_teacher', 
-        'password': 'TeacherPass123', 
-        'dsn': cx_Oracle.makedsn('localhost', 1521, service_name='ORCLCDB')
-    },
-    'STUDENT': {
-        'user': 'user_student', 
-        'password': 'StudentPass123', 
-        'dsn': cx_Oracle.makedsn('localhost', 1521, service_name='ORCLCDB')
-    }
+    'ADMIN': {'user': 'yahya_admin', 'password': '123', 'dsn': cx_Oracle.makedsn('localhost', 1521, service_name='ORCLCDB')},
+    'TEACHER': {'user': 'user_teacher', 'password': 'TeacherPass123', 'dsn': cx_Oracle.makedsn('localhost', 1521, service_name='ORCLCDB')},
+    'STUDENT': {'user': 'user_student', 'password': 'StudentPass123', 'dsn': cx_Oracle.makedsn('localhost', 1521, service_name='ORCLCDB')}
 }
 
-# ==========================================
-# 6. FACTORY
-# ==========================================
 def get_service_for_role(role_name):
     config = ORACLE_CONFIG.get(role_name.upper())
     if not config: return None, None
-
-    db_obj = db(config['user'], config['password'], config['dsn'])
-    cnn = db_obj.get_connection()
+    try:
+        db_obj = db(config['user'], config['password'], config['dsn'])
+        cnn = db_obj.get_connection()
+    except Exception as e:
+        print(f"DB Error: {e}")
+        return None, None
     
     mgrs = {
-        'student': student(cnn),
-        'instructor': instructor(cnn),
-        'course': course(cnn),
-        'section': section(cnn),
-        'registration': registration(cnn),
-        'departement': departement(cnn),
-        'salle': salle(cnn),
-        'semester': semester(cnn),
-        'course_result': course_result(cnn),
-        'prerequisite': prerequisite(cnn),
-        'app_user': app_user(cnn),
+        'student': student(cnn), 'instructor': instructor(cnn), 'course': course(cnn),
+        'section': section(cnn), 'registration': registration(cnn), 'departement': departement(cnn),
+        'salle': salle(cnn), 'semester': semester(cnn), 'course_result': course_result(cnn),
+        'prerequisite': prerequisite(cnn), 'app_user': app_user(cnn),
         'grades_audit': grades_audit(cnn) if grades_audit else None
     }
 
     if role_name.upper() == 'ADMIN':
-        service = AdminService(cnn, mgrs['student'], mgrs['instructor'], mgrs['course'], 
-                               mgrs['section'], mgrs['registration'], mgrs['departement'], 
-                               mgrs['salle'], mgrs['semester'], mgrs['course_result'], 
-                               mgrs['prerequisite'], mgrs['grades_audit'])
+        service = AdminService(cnn, mgrs['student'], mgrs['instructor'], mgrs['course'], mgrs['section'], mgrs['registration'], mgrs['departement'], mgrs['salle'], mgrs['semester'], mgrs['course_result'], mgrs['prerequisite'], mgrs['grades_audit'])
     elif role_name.upper() == 'STUDENT':
-        service = StudentService(cnn, mgrs['student'], mgrs['section'], mgrs['registration'], 
-                                 mgrs['instructor'], mgrs['departement'], mgrs['salle'], 
-                                 mgrs['course_result'], mgrs['app_user'])
+        service = StudentService(cnn, mgrs['student'], mgrs['section'], mgrs['registration'], mgrs['instructor'], mgrs['departement'], mgrs['salle'], mgrs['course_result'], mgrs['app_user'])
     elif role_name.upper() == 'TEACHER':
-        service = TeacherService(cnn, mgrs['instructor'], mgrs['section'], mgrs['student'], 
-                                 mgrs['course'], mgrs['prerequisite'], mgrs['registration'], 
-                                 mgrs['course_result'], mgrs['app_user'], mgrs['departement'], 
-                                 mgrs['salle'], mgrs['semester'])
-    else:
-        return None, None
-
+        service = TeacherService(cnn, mgrs['instructor'], mgrs['section'], mgrs['student'], mgrs['course'], mgrs['prerequisite'], mgrs['registration'], mgrs['course_result'], mgrs['app_user'], mgrs['departement'], mgrs['salle'], mgrs['semester'])
+    else: return None, None
     return service, cnn
 
-def format_response(data):
-    if not data: return []
-    return data
+def format_response(data): return data if data else []
 
-# ==========================================
-# 7. LOGIN
-# ==========================================
 @app.route('/api/login', methods=['POST'])
 def login():
-    data = request.json
-    role = data.get('role') 
-    code_apoge = data.get('code_apoge')
-    password = data.get('password')
-
-    if not all([role, password]): 
-        return jsonify({"error": "Données incomplètes"}), 400
-
+    d = request.json
     try:
-        service, cnn = get_service_for_role(role)
-        if not service: return jsonify({"error": "Role invalide"}), 400
-
-        user_mgr = app_user(cnn)
-        user_data = user_mgr.select_app_user_by_code_apoge(code_apoge)
+        svc, cnn = get_service_for_role(d.get('role'))
+        if not svc: return jsonify({"error": "Connexion DB échouée"}), 500
+        u = app_user(cnn).select_app_user_by_code_apoge(d.get('code_apoge'))
         cnn.close()
+        
+        if d.get('role') == 'ADMIN' and (d.get('password') in ['123', 'AdminPass123']):
+             return jsonify({"message": "OK", "role": "ADMIN"})
+        if u and u[0][2] == d.get('password') and u[0][3] == d.get('role'):
+            return jsonify({"message": "OK", "role": d.get('role'), "code_apoge": d.get('code_apoge')})
+        return jsonify({"error": "Login failed"}), 401
+    except Exception as e: return jsonify({"error": str(e)}), 500
 
-        if role == 'ADMIN':
-            if user_data:
-                if user_data[0][2] == password:
-                     return jsonify({"message": "Success", "role": "ADMIN", "user": "admin"})
-            elif password == "AdminPass123" or password == "123":
-                 return jsonify({"message": "Success (Direct)", "role": "ADMIN", "user": "admin"})
-            return jsonify({"error": "Mot de passe incorrect"}), 401
+# --- ADMIN STATS ---
+@app.route('/api/admin/stats', methods=['GET'])
+def admin_stats():
+    svc, cnn = get_service_for_role('ADMIN')
+    try: return jsonify(svc.get_dashboard_stats())
+    finally: cnn.close()
 
-        if not user_data: return jsonify({"error": "Utilisateur introuvable"}), 404
-
-        stored_password = user_data[0][2]
-        stored_role = user_data[0][3]
-
-        if stored_password != password: return jsonify({"error": "Mot de passe incorrect"}), 401
-        if stored_role != role: return jsonify({"error": f"Ce compte n'est pas {role}"}), 403
-
-        return jsonify({"message": "Login Success", "role": role, "code_apoge": code_apoge})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# ==========================================
-# ROUTES ADMIN
-# ==========================================
-
-# --- ETUDIANTS ---
+# --- ROUTES GET & POST ---
 @app.route('/api/admin/students', methods=['GET'])
-def admin_get_students():
+def get_stds():
     svc, cnn = get_service_for_role('ADMIN')
     try: return jsonify(format_response(svc.show_all_students()))
     finally: cnn.close()
-
 @app.route('/api/admin/student', methods=['POST'])
-def admin_add_student():
+def add_std():
     svc, cnn = get_service_for_role('ADMIN')
     try:
-        d = request.json
-        if svc.add_student(d['first_name'], d['last_name'], d['email'], d['level'], d['password']):
-            return jsonify({"message": "OK"})
+        if svc.add_student(request.json['first_name'], request.json['last_name'], request.json['email'], request.json['level'], request.json['password']): return jsonify({"message": "OK"})
         return jsonify({"error": "Erreur"}), 400
     finally: cnn.close()
 
-# --- PROFESSEURS ---
 @app.route('/api/admin/teachers', methods=['GET'])
-def admin_get_teachers():
+def get_tch():
     svc, cnn = get_service_for_role('ADMIN')
     try: return jsonify(format_response(svc.show_all_instructors()))
     finally: cnn.close()
-
 @app.route('/api/admin/teacher', methods=['POST'])
-def admin_add_teacher():
+def add_tch():
     svc, cnn = get_service_for_role('ADMIN')
     try:
-        d = request.json
-        if svc.add_instructor(d['name'], d['email'], d['dept_id'], d['password']):
-            return jsonify({"message": "OK"})
+        if svc.add_instructor(request.json['name'], request.json['email'], request.json['dept_id'], request.json['password']): return jsonify({"message": "OK"})
         return jsonify({"error": "Erreur"}), 400
     finally: cnn.close()
 
-# --- COURS ---
 @app.route('/api/admin/courses', methods=['GET'])
-def admin_get_courses():
+def get_crs():
     svc, cnn = get_service_for_role('ADMIN')
     try: return jsonify(format_response(svc.show_all_courses()))
     finally: cnn.close()
-
 @app.route('/api/admin/course', methods=['POST'])
-def admin_add_course():
+def add_crs():
     svc, cnn = get_service_for_role('ADMIN')
     try:
-        d = request.json
-        if svc.add_course(d['title'], d['credits']): return jsonify({"message": "OK"})
+        if svc.add_course(request.json['title'], request.json['credits']): return jsonify({"message": "OK"})
         return jsonify({"error": "Erreur"}), 400
     finally: cnn.close()
 
-# --- DEPARTEMENTS ---
 @app.route('/api/admin/departments', methods=['GET'])
-def admin_get_departments():
+def get_dpt():
     svc, cnn = get_service_for_role('ADMIN')
     try: return jsonify(format_response(svc.show_all_departments()))
     finally: cnn.close()
-
 @app.route('/api/admin/departement', methods=['POST'])
-def admin_add_dept():
+def add_dpt():
     svc, cnn = get_service_for_role('ADMIN')
     try:
-        d = request.json
-        if svc.add_departement(d['name']): return jsonify({"message": "OK"})
+        if svc.add_departement(request.json['name']): return jsonify({"message": "OK"})
         return jsonify({"error": "Erreur"}), 400
     finally: cnn.close()
 
-# --- SEMESTRES ---
 @app.route('/api/admin/semesters', methods=['GET'])
-def admin_get_semesters():
+def get_sem():
     svc, cnn = get_service_for_role('ADMIN')
     try: return jsonify(format_response(svc.show_all_semesters()))
     finally: cnn.close()
-
 @app.route('/api/admin/semester', methods=['POST'])
-def admin_add_semester():
+def add_sem():
     svc, cnn = get_service_for_role('ADMIN')
     try:
-        d = request.json
-        if svc.add_semester(d['name'], d['start_date'], d['end_date']): return jsonify({"message": "OK"})
+        if svc.add_semester(request.json['name'], request.json['start_date'], request.json['end_date']): return jsonify({"message": "OK"})
         return jsonify({"error": "Erreur"}), 400
     finally: cnn.close()
 
-# --- SALLES ---
 @app.route('/api/admin/salles', methods=['GET'])
-def admin_get_salles():
+def get_sal():
     svc, cnn = get_service_for_role('ADMIN')
     try: return jsonify(format_response(svc.show_all_salles()))
     finally: cnn.close()
-
 @app.route('/api/admin/salle', methods=['POST'])
-def admin_add_salle():
+def add_sal():
     svc, cnn = get_service_for_role('ADMIN')
     try:
-        d = request.json
-        if svc.add_salle(d['code'], d['capacity'], d['building']): return jsonify({"message": "OK"})
+        if svc.add_salle(request.json['code'], request.json['capacity'], request.json['building']): return jsonify({"message": "OK"})
         return jsonify({"error": "Erreur"}), 400
     finally: cnn.close()
 
-# ==========================================
-# 8. ROUTES SECTIONS (CORRIGÉES)
-# ==========================================
-
 @app.route('/api/admin/sections', methods=['GET'])
-def admin_get_sections():
+def get_secs():
     svc, cnn = get_service_for_role('ADMIN')
-    try:
-        # FIX: "show_sections" (Nom correct dans admin.py)
-        data = svc.show_sections() 
-        return jsonify(format_response(data))
+    try: return jsonify(format_response(svc.show_sections()))
     finally: cnn.close()
-
 @app.route('/api/admin/section', methods=['POST'])
-def admin_add_section():
+def add_sec():
     svc, cnn = get_service_for_role('ADMIN')
     try:
         d = request.json
-        
-        # FIX: CONVERSION DATE STRING -> DATETIME OBJECT
-        # Hada howa l-7ll d ORA-01861
-        start_dt = datetime.strptime(d['start'], '%Y-%m-%d %H:%M:%S')
-        end_dt = datetime.strptime(d['end'], '%Y-%m-%d %H:%M:%S')
-
-        if svc.add_section(d['course_code'], d['semester_id'], d['instructor_id'], 
-                           d['salle_id'], d['capacity'], d['day'], start_dt, end_dt):
-            return jsonify({"message": "Section créée"})
-        return jsonify({"error": "Erreur création"}), 400
-    except Exception as e:
-        print("Erreur Date/System:", e)
-        return jsonify({"error": str(e)}), 400
-    finally:
-        cnn.close()
-
-@app.route('/api/admin/section/<section_id>', methods=['DELETE'])
-def admin_delete_section(section_id):
-    svc, cnn = get_service_for_role('ADMIN')
-    try:
-        # FIX: "drop_section" (Nom correct dans admin.py)
-        if svc.drop_section(section_id):
-            return jsonify({"message": "Section supprimée"})
-        return jsonify({"error": "Erreur suppression"}), 400
+        s_dt = datetime.strptime(d['start'], '%Y-%m-%d %H:%M:%S')
+        e_dt = datetime.strptime(d['end'], '%Y-%m-%d %H:%M:%S')
+        if svc.add_section(d['course_code'], d['semester_id'], d['instructor_id'], d['salle_id'], d['capacity'], d['day'], s_dt, e_dt):
+            return jsonify({"message": "OK"})
+        return jsonify({"error": "Erreur"}), 400
+    except Exception as e: return jsonify({"error": str(e)}), 400
     finally: cnn.close()
-
-# ==========================================
-# 9. ROUTES INSCRIPTIONS
-# ==========================================
 
 @app.route('/api/admin/section/<section_id>/registrations', methods=['GET'])
-def admin_get_section_registrations(section_id):
+def get_regs(section_id):
     svc, cnn = get_service_for_role('ADMIN')
-    try:
-        # FIX: admin.py ma fihch had l-fonction, donc kansta3mlo MANAGER direct
-        data = svc.registration.get_registrations_by_section(section_id)
-        return jsonify(format_response(data))
+    try: return jsonify(format_response(svc.show_section_registrations(section_id)))
     finally: cnn.close()
-
 @app.route('/api/admin/registration/status', methods=['PUT'])
-def admin_update_reg_status():
+def upd_reg():
     svc, cnn = get_service_for_role('ADMIN')
     try:
-        d = request.json
-        # FIX: admin.py ma fihch generic update, kansta3mlo MANAGER direct
-        if svc.registration.update_registration_status(d['registration_id'], d['status']):
-            return jsonify({"message": "Statut mis à jour"})
-        return jsonify({"error": "Erreur mise à jour"}), 400
+        if svc.change_registration_status(request.json['registration_id'], request.json['status']): return jsonify({"message": "OK"})
+        return jsonify({"error": "Erreur"}), 400
     finally: cnn.close()
 
-# --- AUDIT ---
 @app.route('/api/admin/audit', methods=['GET'])
-def admin_audit():
+def get_aud():
     svc, cnn = get_service_for_role('ADMIN')
     try: return jsonify(format_response(svc.show_audit_logs()))
     finally: cnn.close()
 
+# --- ROUTES DELETE ---
+@app.route('/api/admin/student/<code_apoge>', methods=['DELETE'])
+def del_std(code_apoge):
+    svc, cnn = get_service_for_role('ADMIN')
+    try:
+        if svc.drop_student(code_apoge): return jsonify({"message": "OK"})
+        return jsonify({"error": "Erreur"}), 400
+    finally: cnn.close()
+
+@app.route('/api/admin/teacher/<code_apoge>', methods=['DELETE'])
+def del_tch(code_apoge):
+    svc, cnn = get_service_for_role('ADMIN')
+    try:
+        if svc.drop_instructor(code_apoge): return jsonify({"message": "OK"})
+        return jsonify({"error": "Erreur"}), 400
+    finally: cnn.close()
+
+@app.route('/api/admin/course/<path:title>', methods=['DELETE'])
+def del_crs(title):
+    svc, cnn = get_service_for_role('ADMIN')
+    try:
+        if svc.drop_course(title): return jsonify({"message": "OK"})
+        return jsonify({"error": "Erreur"}), 400
+    finally: cnn.close()
+
+@app.route('/api/admin/departement/<name>', methods=['DELETE'])
+def del_dpt(name):
+    svc, cnn = get_service_for_role('ADMIN')
+    try:
+        if svc.drop_departement(name): return jsonify({"message": "OK"})
+        return jsonify({"error": "Erreur"}), 400
+    finally: cnn.close()
+
+@app.route('/api/admin/semester/<name>', methods=['DELETE'])
+def del_sem(name):
+    svc, cnn = get_service_for_role('ADMIN')
+    try:
+        if svc.drop_semester(name): return jsonify({"message": "OK"})
+        return jsonify({"error": "Erreur"}), 400
+    finally: cnn.close()
+
+@app.route('/api/admin/salle/<code>', methods=['DELETE'])
+def del_sal(code):
+    svc, cnn = get_service_for_role('ADMIN')
+    try:
+        if svc.drop_salle(code): return jsonify({"message": "OK"})
+        return jsonify({"error": "Erreur"}), 400
+    finally: cnn.close()
+
+@app.route('/api/admin/section/<sid>', methods=['DELETE'])
+def del_sec(sid):
+    svc, cnn = get_service_for_role('ADMIN')
+    try:
+        if svc.drop_section(sid): return jsonify({"message": "OK"})
+        return jsonify({"error": "Erreur"}), 400
+    finally: cnn.close()
 # ==========================================
-# ROUTES STUDENT / TEACHER
+# ROUTES MODIFICATIONS (UPDATES)
 # ==========================================
-# (Keep student/teacher routes same as before - omitted for brevity but include them if needed)
-# ...
+
+# 1. Password Student
+@app.route('/api/admin/student/password', methods=['PUT'])
+def update_student_pass():
+    svc, cnn = get_service_for_role('ADMIN')
+    try:
+        d = request.json
+        if svc.modify_student_password(d['code_apoge'], d['new_password']):
+            return jsonify({"message": "Mot de passe étudiant modifié"})
+        return jsonify({"error": "Erreur modification"}), 400
+    finally: cnn.close()
+
+# 2. Password Teacher
+@app.route('/api/admin/teacher/password', methods=['PUT'])
+def update_teacher_pass():
+    svc, cnn = get_service_for_role('ADMIN')
+    try:
+        d = request.json
+        if svc.modify_teacher_password(d['code_apoge'], d['new_password']):
+            return jsonify({"message": "Mot de passe professeur modifié"})
+        return jsonify({"error": "Erreur modification"}), 400
+    finally: cnn.close()
+
+# 3. Course Credits
+@app.route('/api/admin/course/credits', methods=['PUT'])
+def update_course_credits():
+    svc, cnn = get_service_for_role('ADMIN')
+    try:
+        d = request.json
+        if svc.modify_course_credits(d['title'], d['credits']):
+            return jsonify({"message": "Crédits modifiés"})
+        return jsonify({"error": "Erreur modification"}), 400
+    finally: cnn.close()
+
+# 4. Departement Name
+@app.route('/api/admin/departement/name', methods=['PUT'])
+def update_dept_name():
+    svc, cnn = get_service_for_role('ADMIN')
+    try:
+        d = request.json
+        if svc.modify_departement_name(d['old_name'], d['new_name']):
+            return jsonify({"message": "Nom département modifié"})
+        return jsonify({"error": "Erreur modification"}), 400
+    finally: cnn.close()
+
+# 5. Semester Name
+@app.route('/api/admin/semester/name', methods=['PUT'])
+def update_sem_name():
+    svc, cnn = get_service_for_role('ADMIN')
+    try:
+        d = request.json
+        if svc.modify_semester_name(d['old_name'], d['new_name']):
+            return jsonify({"message": "Nom semestre modifié"})
+        return jsonify({"error": "Erreur modification"}), 400
+    finally: cnn.close()
+
+# 6. Salle Capacity
+@app.route('/api/admin/salle/capacity', methods=['PUT'])
+def update_salle_cap():
+    svc, cnn = get_service_for_role('ADMIN')
+    try:
+        d = request.json
+        if svc.modify_salle_capacity(d['code'], d['capacity']):
+            return jsonify({"message": "Capacité salle modifiée"})
+        return jsonify({"error": "Erreur modification"}), 400
+    finally: cnn.close()
+
+# 7. Section Updates (Prof, Salle, Block)
+@app.route('/api/admin/section/update', methods=['PUT'])
+def update_section_details():
+    svc, cnn = get_service_for_role('ADMIN')
+    try:
+        d = request.json
+        sec_id = d.get('section_id')
+        
+        # Modification Professeur
+        if 'instructor_id' in d:
+            if not svc.modify_section_prof(sec_id, d['instructor_id']):
+                return jsonify({"error": "Erreur update prof"}), 400
+        
+        # Modification Salle
+        if 'salle_id' in d:
+            if not svc.modify_section_salle(sec_id, d['salle_id']):
+                return jsonify({"error": "Erreur update salle"}), 400
+
+        return jsonify({"message": "Section mise à jour"})
+    finally: cnn.close()
+
+@app.route('/api/admin/section/block', methods=['PUT'])
+def block_section_route():
+    svc, cnn = get_service_for_role('ADMIN')
+    try:
+        d = request.json
+        # Appelle la logique pour égaliser max_capacity = current_enrolled
+        if svc.block_section(d['section_id']):
+            return jsonify({"message": "Section bloquée (Complet)"})
+        return jsonify({"error": "Erreur blocage"}), 400
+    finally: cnn.close()
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

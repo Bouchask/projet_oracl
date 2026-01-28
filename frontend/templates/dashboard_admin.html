@@ -7,17 +7,64 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../static/style.css">
     <style>
-        /* Style additionnel pour le gestionnaire d'inscriptions */
-        #registrationManager {
-            background-color: #f8f9fa;
-            border-left: 5px solid #3498db;
-            padding: 20px;
-            margin-top: 20px;
-            border-radius: 8px;
+        /* --- MODALE (POPUP) --- */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; top: 0; width: 100%; height: 100%; 
+            background-color: rgba(0,0,0,0.5); 
+            justify-content: center; align-items: center;
         }
+        .modal-content {
+            background-color: white; 
+            padding: 30px; 
+            border-radius: 12px; 
+            width: 400px; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .close-btn {
+            position: absolute; top: 10px; right: 15px; font-size: 20px; cursor: pointer; color: #aaa;
+        }
+        .close-btn:hover { color: #000; }
+        .modal h3 { margin-top: 0; color: #2c3e50; }
+        .modal label { font-weight: bold; display: block; margin-top: 10px; }
+        .modal input, .modal select { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; }
+
+        /* --- ACTIONS BUTTONS --- */
+        .btn-action { margin: 0 2px; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; color: white; transition: 0.2s;}
+        .btn-edit { background-color: #f39c12; } /* Orange pour Edit */
+        .btn-edit:hover { background-color: #d35400; }
+        .btn-lock { background-color: #34495e; } /* Gris foncé pour Bloquer */
+        .btn-lock:hover { background-color: #2c3e50; }
+        .btn-danger { background-color: #e74c3c; } /* Rouge pour Supprimer */
+        .btn-danger:hover { background-color: #c0392b; }
+        .btn-secondary { background-color: #3498db; } /* Bleu pour Voir */
+        
+        /* --- STATS CARDS --- */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; border-bottom: 4px solid #3498db; }
+        .stat-number { font-size: 2.5em; font-weight: 700; color: #2c3e50; }
+        .stat-label { color: #7f8c8d; font-weight: 600; text-transform: uppercase; font-size: 0.9em; letter-spacing: 1px; }
+        
+        /* --- SECTION INSCRIPTIONS --- */
+        #registrationManager { background-color: #f8f9fa; border-left: 5px solid #3498db; padding: 20px; margin-top: 20px; border-radius: 8px; display: none; }
     </style>
 </head>
 <body>
+
+    <div id="updateModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <h3 id="modalTitle">Modification</h3>
+            <div id="modalBody">
+                </div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button class="btn-primary" onclick="submitUpdate()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
 
     <div class="sidebar">
         <h2>🎓 Admin Panel</h2>
@@ -35,6 +82,13 @@
     <div class="main-content">
         <div id="notification"></div>
 
+        <div class="stats-grid">
+            <div class="stat-card"><span class="stat-number" id="stat-students">0</span><span class="stat-label">Étudiants</span></div>
+            <div class="stat-card"><span class="stat-number" id="stat-teachers">0</span><span class="stat-label">Professeurs</span></div>
+            <div class="stat-card"><span class="stat-number" id="stat-courses">0</span><span class="stat-label">Cours</span></div>
+            <div class="stat-card"><span class="stat-number" id="stat-sections">0</span><span class="stat-label">Sections</span></div>
+        </div>
+
         <div id="students" class="section-view active">
             <div class="header"><h1>Gestion des Étudiants</h1></div>
             <div class="card">
@@ -44,11 +98,7 @@
                     <div class="form-group"><label>Nom</label><input type="text" id="std_lname"></div>
                     <div class="form-group"><label>Email</label><input type="email" id="std_email"></div>
                     <div class="form-group"><label>Niveau</label>
-                        <select id="std_level">
-                            <option value="LICENCE">Licence</option>
-                            <option value="MASTER">Master</option>
-                            <option value="DEUG">DEUG</option>
-                        </select>
+                        <select id="std_level"><option value="LICENCE">Licence</option><option value="MASTER">Master</option><option value="DEUG">DEUG</option></select>
                     </div>
                     <div class="form-group"><label>Mot de passe</label><input type="password" id="std_pass"></div>
                 </div>
@@ -58,10 +108,7 @@
                 <h3>Liste des Étudiants</h3>
                 <button class="btn-secondary" onclick="loadStudents()">Actualiser</button>
                 <div class="table-container">
-                    <table id="studentsTable">
-                        <thead><tr><th>Code</th><th>Nom</th><th>Email</th><th>Niveau</th><th>Action</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
+                    <table id="studentsTable"><thead><tr><th>Code</th><th>Nom</th><th>Email</th><th>Niveau</th><th>Action</th></tr></thead><tbody></tbody></table>
                 </div>
             </div>
         </div>
@@ -73,29 +120,16 @@
                 <div class="form-grid">
                     <div class="form-group"><label>Nom Complet</label><input type="text" id="prof_name"></div>
                     <div class="form-group"><label>Email</label><input type="email" id="prof_email"></div>
-                    <div class="form-group"><label>Département</label>
-                        <select id="prof_dept"><option value="">Chargement...</option></select>
-                    </div>
+                    <div class="form-group"><label>Département</label><select id="prof_dept"><option value="">Chargement...</option></select></div>
                     <div class="form-group"><label>Mot de passe</label><input type="password" id="prof_pass"></div>
                 </div>
-                <button class="btn-primary" onclick="addTeacher()">Ajouter le professeur</button>
+                <button class="btn-primary" onclick="addTeacher()">Ajouter</button>
             </div>
             <div class="card">
                 <h3>Liste des Professeurs</h3>
                 <button class="btn-secondary" onclick="loadTeachers()">Actualiser</button>
                 <div class="table-container">
-                    <table id="teachersTable">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Code</th> <th>Nom</th>
-            <th>Email</th>
-            <th>Département</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody></tbody>
-</table>
+                    <table id="teachersTable"><thead><tr><th>Code</th><th>Nom</th><th>Email</th><th>Dépt</th><th>Action</th></tr></thead><tbody></tbody></table>
                 </div>
             </div>
         </div>
@@ -114,10 +148,7 @@
                 <h3>Liste des Cours</h3>
                 <button class="btn-secondary" onclick="loadCourses()">Actualiser</button>
                 <div class="table-container">
-                    <table id="coursesTable">
-                        <thead><tr><th>ID</th><th>Titre</th><th>Crédits</th><th>Action</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
+                    <table id="coursesTable"><thead><tr><th>Titre</th><th>Crédits</th><th>Action</th></tr></thead><tbody></tbody></table>
                 </div>
             </div>
         </div>
@@ -132,9 +163,7 @@
             <div class="card">
                 <h3>Liste</h3>
                 <button class="btn-secondary" onclick="loadDepartments()">Actualiser</button>
-                <div class="table-container">
-                    <table id="departmentsTable"><thead><tr><th>ID</th><th>Nom</th><th>Action</th></tr></thead><tbody></tbody></table>
-                </div>
+                <div class="table-container"><table id="departmentsTable"><thead><tr><th>ID</th><th>Nom</th><th>Action</th></tr></thead><tbody></tbody></table></div>
             </div>
         </div>
 
@@ -152,9 +181,7 @@
             <div class="card">
                 <h3>Liste</h3>
                 <button class="btn-secondary" onclick="loadSemesters()">Actualiser</button>
-                <div class="table-container">
-                    <table id="semestersTable"><thead><tr><th>ID</th><th>Nom</th><th>Dates</th></tr></thead><tbody></tbody></table>
-                </div>
+                <div class="table-container"><table id="semestersTable"><thead><tr><th>Nom</th><th>Dates</th><th>Action</th></tr></thead><tbody></tbody></table></div>
             </div>
         </div>
 
@@ -172,15 +199,12 @@
             <div class="card">
                 <h3>Liste</h3>
                 <button class="btn-secondary" onclick="loadSalles()">Actualiser</button>
-                <div class="table-container">
-                    <table id="sallesTable"><thead><tr><th>ID</th><th>Code</th><th>Cap.</th><th>Bât.</th></tr></thead><tbody></tbody></table>
-                </div>
+                <div class="table-container"><table id="sallesTable"><thead><tr><th>Code</th><th>Cap.</th><th>Bât.</th><th>Action</th></tr></thead><tbody></tbody></table></div>
             </div>
         </div>
 
         <div id="sections" class="section-view">
-            <div class="header"><h1>Gestion des Sections & Inscriptions</h1></div>
-            
+            <div class="header"><h1>Gestion des Sections</h1></div>
             <div class="card">
                 <h3>Créer une Section</h3>
                 <div class="form-grid">
@@ -188,94 +212,73 @@
                     <div class="form-group"><label>Semestre</label><select id="sec_sem"><option>Chargement...</option></select></div>
                     <div class="form-group"><label>Professeur</label><select id="sec_prof"><option>Chargement...</option></select></div>
                     <div class="form-group"><label>Salle</label><select id="sec_salle"><option>Chargement...</option></select></div>
-                    <div class="form-group"><label>Jour</label>
-                        <select id="sec_day">
-                            <option value="Lundi">Lundi</option><option value="Mardi">Mardi</option>
-                            <option value="Mercredi">Mercredi</option><option value="Jeudi">Jeudi</option>
-                            <option value="Vendredi">Vendredi</option><option value="Samedi">Samedi</option>
-                        </select>
-                    </div>
+                    <div class="form-group"><label>Jour</label><select id="sec_day"><option>Lundi</option><option>Mardi</option><option>Mercredi</option><option>Jeudi</option><option>Vendredi</option><option>Samedi</option></select></div>
                     <div class="form-group"><label>Début (HH:MM)</label><input type="time" id="sec_start"></div>
                     <div class="form-group"><label>Fin (HH:MM)</label><input type="time" id="sec_end"></div>
                     <div class="form-group"><label>Capacité</label><input type="number" id="sec_cap" value="30"></div>
                 </div>
                 <button class="btn-primary" onclick="addSection()">Créer Section</button>
             </div>
-
+            
             <div class="card">
                 <h3>Liste des Sections</h3>
                 <button class="btn-secondary" onclick="loadSections()">Actualiser</button>
                 <div class="table-container">
-                    <table id="sectionsTable">
-                        <thead>
-                            <tr>
-                                <th>Cours</th><th>Semestre</th><th>Prof</th><th>Salle</th>
-                                <th>Horaire</th><th>Inscrits</th><th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                    <table id="sectionsTable"><thead><tr><th>Cours</th><th>Semestre</th><th>Prof</th><th>Salle</th><th>Horaire</th><th>Inscrits</th><th>Action</th></tr></thead><tbody></tbody></table>
                 </div>
             </div>
 
-            <div id="registrationManager" style="display:none;">
+            <div id="registrationManager">
                 <h3 id="regTitle" style="color: #2c3e50;">Inscriptions</h3>
-                <div style="margin-bottom: 10px;">
-                    <button class="btn-danger" onclick="closeRegManager()">Fermer</button>
-                </div>
-                <div class="table-container">
-                    <table id="regTable">
-                        <thead><tr><th>Etudiant</th><th>Code Apogée</th><th>Date</th><th>Statut</th><th>Action</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
+                <div style="margin-bottom: 10px;"><button class="btn-danger" onclick="closeRegManager()">Fermer</button></div>
+                <div class="table-container"><table id="regTable"><thead><tr><th>Etudiant</th><th>Code Apogée</th><th>Date</th><th>Statut</th><th>Action</th></tr></thead><tbody></tbody></table></div>
             </div>
         </div>
 
         <div id="audit" class="section-view">
             <div class="header"><h1>Audit Logs</h1></div>
-            <div class="card">
-                <button class="btn-primary" onclick="loadAudit()">Charger les Logs</button>
-                <div class="table-container">
-                    <table id="auditTable"><thead><tr><th>ID</th><th>Etudiant</th><th>Cours</th><th>Avant</th><th>Après</th><th>Date</th></tr></thead><tbody></tbody></table>
-                </div>
-            </div>
+            <div class="card"><button class="btn-primary" onclick="loadAudit()">Charger Logs</button><div class="table-container"><table id="auditTable"><thead><tr><th>ID</th><th>Etudiant</th><th>Cours</th><th>Avant</th><th>Après</th><th>Date</th></tr></thead><tbody></tbody></table></div></div>
         </div>
-
     </div>
 
     <script>
         const API_URL = "http://localhost:5000/api";
+        let globalProfs = [], globalSalles = []; // Pour les formulaires d'édition
 
         window.onload = () => {
-            // Charge les données initiales
+            loadStats();
             loadStudents();
-            loadDeptDropdown(); 
+            loadDeptDropdown();
+            loadGlobalData(); // Précharge profs et salles pour l'édition
         };
 
         function showSection(id) {
             document.querySelectorAll('.section-view').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
-            
             document.getElementById(id).classList.add('active');
             
-            // Trouver le bouton cliqué pour le mettre actif
             const buttons = document.querySelectorAll('.sidebar button');
-            buttons.forEach(btn => {
-                if(btn.getAttribute('onclick').includes(id)) {
-                    btn.classList.add('active');
-                }
-            });
+            buttons.forEach(btn => { if(btn.getAttribute('onclick').includes(id)) btn.classList.add('active'); });
 
-            // Logic de chargement automatique
+            // Chargement automatique selon la section
             if(id === 'students') loadStudents();
             if(id === 'teachers') { loadTeachers(); loadDeptDropdown(); }
             if(id === 'courses') loadCourses();
             if(id === 'departments') loadDepartments();
             if(id === 'semesters') loadSemesters();
             if(id === 'salles') loadSalles();
+            if(id === 'sections') { loadSections(); loadSectionDropdowns(); loadGlobalData(); }
             if(id === 'audit') loadAudit();
-            if(id === 'sections') { loadSections(); loadSectionDropdowns(); }
+            loadStats();
+        }
+
+        async function fetchAPI(endpoint, method="GET", body=null) {
+            try {
+                const options = { method: method, headers: {'Content-Type': 'application/json'} };
+                if (body) options.body = JSON.stringify(body);
+                const res = await fetch(`${API_URL}${endpoint}`, options);
+                return await res.json();
+            } catch (err) { console.error(err); return {error: "Erreur connexion"}; }
         }
 
         function showNotify(msg, isError = false) {
@@ -286,257 +289,202 @@
             setTimeout(() => notif.style.display = 'none', 3000);
         }
 
-        async function fetchAPI(endpoint, method="GET", body=null) {
-            try {
-                const options = { method: method, headers: {'Content-Type': 'application/json'} };
-                if (body) options.body = JSON.stringify(body);
-                const res = await fetch(`${API_URL}${endpoint}`, options);
-                return await res.json();
-            } catch (err) { console.error(err); return {error: "Erreur connexion serveur"}; }
+        // ==========================================
+        // GESTION MODALE & MODIFICATIONS
+        // ==========================================
+        let currentUpdateType = "", currentUpdateId = "";
+
+        function openModal(title, bodyHtml, updateType, id) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalBody').innerHTML = bodyHtml;
+            currentUpdateType = updateType;
+            currentUpdateId = id;
+            document.getElementById('updateModal').style.display = 'flex';
+        }
+        function closeModal() { document.getElementById('updateModal').style.display = 'none'; }
+
+        async function submitUpdate() {
+            let body = {}; let url = "";
+            const val = document.getElementById('new_val') ? document.getElementById('new_val').value : null;
+
+            if (currentUpdateType === 'student_pass') { url = '/admin/student/password'; body = { code_apoge: currentUpdateId, new_password: val }; }
+            else if (currentUpdateType === 'teacher_pass') { url = '/admin/teacher/password'; body = { code_apoge: currentUpdateId, new_password: val }; }
+            else if (currentUpdateType === 'course_credits') { url = '/admin/course/credits'; body = { title: currentUpdateId, credits: val }; }
+            else if (currentUpdateType === 'dept_name') { url = '/admin/departement/name'; body = { old_name: currentUpdateId, new_name: val }; }
+            else if (currentUpdateType === 'sem_name') { url = '/admin/semester/name'; body = { old_name: currentUpdateId, new_name: val }; }
+            else if (currentUpdateType === 'salle_cap') { url = '/admin/salle/capacity'; body = { code: currentUpdateId, capacity: val }; }
+            else if (currentUpdateType === 'section_update') {
+                url = '/admin/section/update';
+                body = { section_id: currentUpdateId, instructor_id: document.getElementById('upd_prof').value, salle_id: document.getElementById('upd_salle').value };
+            }
+
+            const res = await fetchAPI(url, 'PUT', body);
+            if(res && !res.error) { showNotify("Mise à jour réussie"); closeModal(); showSection(document.querySelector('.section-view.active').id); } 
+            else showNotify("Erreur: " + (res.error || "Inconnue"), true);
         }
 
-        /* --- STUDENTS --- */
+        // ==========================================
+        // FONCTIONS LOADERS & CRUD
+        // ==========================================
+
+        // --- STATS ---
+        async function loadStats() {
+            const data = await fetchAPI('/admin/stats');
+            if(data && !data.error) {
+                document.getElementById('stat-students').innerText = data.students || 0;
+                document.getElementById('stat-teachers').innerText = data.instructors || 0;
+                document.getElementById('stat-courses').innerText = data.courses || 0;
+                document.getElementById('stat-sections').innerText = data.sections || 0;
+            }
+        }
+
+        // --- ETUDIANTS ---
         async function loadStudents() {
             const data = await fetchAPI('/admin/students');
-            const tbody = document.querySelector("#studentsTable tbody");
-            tbody.innerHTML = "";
-            if(data && !data.error) data.forEach(std => {
-                tbody.innerHTML += `<tr><td>${std[1]}</td><td>${std[2]} ${std[3]}</td><td>${std[4]}</td><td>${std[5]}</td><td><button class="btn-danger">X</button></td></tr>`;
+            const tbody = document.querySelector("#studentsTable tbody"); tbody.innerHTML = "";
+            if(data && !data.error) data.forEach(s => {
+                tbody.innerHTML += `<tr><td>${s[1]}</td><td>${s[2]} ${s[3]}</td><td>${s[4]}</td><td>${s[5]}</td><td>
+                    <button class="btn-action btn-edit" title="Changer MDP" onclick="openModal('Modifier Mot de passe', '<label>Nouveau mot de passe</label><input type=\\'password\\' id=\\'new_val\\' class=\\'form-control\\'>', 'student_pass', '${s[1]}')">✏️</button>
+                    <button class="btn-action btn-danger" onclick="deleteItem('/admin/student/${s[1]}')">🗑️</button>
+                </td></tr>`;
             });
         }
         async function addStudent() {
-            const body = {
-                first_name: document.getElementById('std_fname').value,
-                last_name: document.getElementById('std_lname').value,
-                email: document.getElementById('std_email').value,
-                level: document.getElementById('std_level').value,
-                password: document.getElementById('std_pass').value
-            };
+            const body = { first_name: document.getElementById('std_fname').value, last_name: document.getElementById('std_lname').value, email: document.getElementById('std_email').value, level: document.getElementById('std_level').value, password: document.getElementById('std_pass').value };
             const res = await fetchAPI('/admin/student', 'POST', body);
-            if(res && !res.error) { showNotify("Etudiant ajouté"); loadStudents(); } 
-            else showNotify("Erreur: " + res.error, true);
+            if(res && !res.error) { showNotify("Etudiant ajouté"); loadStudents(); } else showNotify("Erreur", true);
         }
 
-        /* --- TEACHERS --- */
-        async function loadDeptDropdown() {
-            const data = await fetchAPI('/admin/departments');
-            const select = document.getElementById('prof_dept');
-            select.innerHTML = '<option value="" disabled selected>Choisir...</option>';
-            if(data && !data.error) data.forEach(d => {
-                select.innerHTML += `<option value="${d[0]}">${d[1]}</option>`;
-            });
-        }
+        // --- PROFESSEURS ---
         async function loadTeachers() {
             const data = await fetchAPI('/admin/teachers');
-            const tbody = document.querySelector("#teachersTable tbody");
-            tbody.innerHTML = "";
+            const tbody = document.querySelector("#teachersTable tbody"); tbody.innerHTML = "";
             if(data && !data.error) data.forEach(t => {
-                tbody.innerHTML += `<tr><td>${t[0]}</td><td><strong>${t[1]}</strong></td><td>${t[2]}</td><td>${t[3]}</td><td>${t[4]}</td><td><button class="btn-danger">X</button></td></tr>`;
+                tbody.innerHTML += `<tr><td>${t[1]}</td><td>${t[2]}</td><td>${t[3]}</td><td>${t[4]}</td><td>
+                    <button class="btn-action btn-edit" title="Changer MDP" onclick="openModal('Modifier Mot de passe', '<label>Nouveau mot de passe</label><input type=\\'password\\' id=\\'new_val\\' class=\\'form-control\\'>', 'teacher_pass', '${t[1]}')">✏️</button>
+                    <button class="btn-action btn-danger" onclick="deleteItem('/admin/teacher/${t[1]}')">🗑️</button>
+                </td></tr>`;
             });
         }
         async function addTeacher() {
-            const body = {
-                name: document.getElementById('prof_name').value,
-                email: document.getElementById('prof_email').value,
-                dept_id: document.getElementById('prof_dept').value,
-                password: document.getElementById('prof_pass').value
-            };
+            const body = { name: document.getElementById('prof_name').value, email: document.getElementById('prof_email').value, dept_id: document.getElementById('prof_dept').value, password: document.getElementById('prof_pass').value };
             const res = await fetchAPI('/admin/teacher', 'POST', body);
-            if(res && !res.error) { showNotify("Professeur ajouté"); loadTeachers(); } 
-            else showNotify("Erreur: " + res.error, true);
+            if(res && !res.error) { showNotify("Professeur ajouté"); loadTeachers(); } else showNotify("Erreur", true);
         }
 
-        /* --- COURSES --- */
+        // --- COURS ---
         async function loadCourses() {
             const data = await fetchAPI('/admin/courses');
-            const tbody = document.querySelector("#coursesTable tbody");
-            tbody.innerHTML = "";
+            const tbody = document.querySelector("#coursesTable tbody"); tbody.innerHTML = "";
             if(data && !data.error) data.forEach(c => {
-                tbody.innerHTML += `<tr><td>${c[0]}</td><td>${c[1]}</td><td>${c[2]}</td><td><button class="btn-danger">X</button></td></tr>`;
+                tbody.innerHTML += `<tr><td>${c[1]}</td><td>${c[2]}</td><td>
+                    <button class="btn-action btn-edit" title="Modifier crédits" onclick="openModal('Modifier Crédits', '<label>Nouveaux crédits</label><input type=\\'number\\' id=\\'new_val\\' value=\\'${c[2]}\\'>', 'course_credits', '${c[1]}')">✏️</button>
+                    <button class="btn-action btn-danger" onclick="deleteItem('/admin/course/${c[1]}')">🗑️</button>
+                </td></tr>`;
             });
         }
         async function addCourse() {
             const body = { title: document.getElementById('course_title').value, credits: document.getElementById('course_credits').value };
             const res = await fetchAPI('/admin/course', 'POST', body);
-            if(res && !res.error) { showNotify("Cours ajouté"); loadCourses(); }
+            if(res && !res.error) { showNotify("Cours ajouté"); loadCourses(); } else showNotify("Erreur", true);
         }
 
-        /* --- DEPARTMENTS --- */
+        // --- AUTRES (Depart, Semestre, Salle) ---
         async function loadDepartments() {
             const data = await fetchAPI('/admin/departments');
-            const tbody = document.querySelector("#departmentsTable tbody");
-            tbody.innerHTML = "";
-            if(data && !data.error) data.forEach(d => tbody.innerHTML += `<tr><td>${d[0]}</td><td>${d[1]}</td><td><button class="btn-danger">X</button></td></tr>`);
+            const tbody = document.querySelector("#departmentsTable tbody"); tbody.innerHTML = "";
+            if(data && !data.error) data.forEach(d => {
+                tbody.innerHTML += `<tr><td>${d[0]}</td><td>${d[1]}</td><td>
+                    <button class="btn-action btn-edit" onclick="openModal('Renommer', '<label>Nouveau nom</label><input type=\\'text\\' id=\\'new_val\\' value=\\'${d[1]}\\'>', 'dept_name', '${d[1]}')">✏️</button>
+                    <button class="btn-action btn-danger" onclick="deleteItem('/admin/departement/${d[1]}')">🗑️</button>
+                </td></tr>`;
+            });
         }
-        async function addDepartment() {
-            const res = await fetchAPI('/admin/departement', 'POST', { name: document.getElementById('dept_name').value });
-            if(res && !res.error) { showNotify("Département ajouté"); loadDepartments(); }
-        }
+        async function addDepartment() { const res = await fetchAPI('/admin/departement', 'POST', { name: document.getElementById('dept_name').value }); if(res && !res.error) { showNotify("Ajouté"); loadDepartments(); } }
 
-        /* --- SEMESTERS --- */
         async function loadSemesters() {
             const data = await fetchAPI('/admin/semesters');
-            const tbody = document.querySelector("#semestersTable tbody");
-            tbody.innerHTML = "";
-            if(data && !data.error) data.forEach(s => tbody.innerHTML += `<tr><td>${s[0]}</td><td>${s[1]}</td><td>${s[2]} - ${s[3]}</td></tr>`);
+            const tbody = document.querySelector("#semestersTable tbody"); tbody.innerHTML = "";
+            if(data && !data.error) data.forEach(s => {
+                tbody.innerHTML += `<tr><td>${s[1]}</td><td>${s[2]} - ${s[3]}</td><td>
+                    <button class="btn-action btn-edit" onclick="openModal('Renommer', '<label>Nouveau nom</label><input type=\\'text\\' id=\\'new_val\\' value=\\'${s[1]}\\'>', 'sem_name', '${s[1]}')">✏️</button>
+                    <button class="btn-action btn-danger" onclick="deleteItem('/admin/semester/${s[1]}')">🗑️</button>
+                </td></tr>`;
+            });
         }
-        async function addSemester() {
-            const body = { 
-                name: document.getElementById('sem_name').value, 
-                start_date: document.getElementById('sem_start').value, 
-                end_date: document.getElementById('sem_end').value 
-            };
-            const res = await fetchAPI('/admin/semester', 'POST', body);
-            if(res && !res.error) { showNotify("Semestre ajouté"); loadSemesters(); }
-        }
+        async function addSemester() { const body = { name: document.getElementById('sem_name').value, start_date: document.getElementById('sem_start').value, end_date: document.getElementById('sem_end').value }; const res = await fetchAPI('/admin/semester', 'POST', body); if(res && !res.error) { showNotify("Ajouté"); loadSemesters(); } }
 
-        /* --- SALLES --- */
         async function loadSalles() {
             const data = await fetchAPI('/admin/salles');
-            const tbody = document.querySelector("#sallesTable tbody");
-            tbody.innerHTML = "";
-            if(data && !data.error) data.forEach(s => tbody.innerHTML += `<tr><td>${s[0]}</td><td>${s[1]}</td><td>${s[2]}</td><td>${s[3]}</td></tr>`);
-        }
-        async function addSalle() {
-            const body = { 
-                code: document.getElementById('salle_code').value, 
-                capacity: document.getElementById('salle_cap').value, 
-                building: document.getElementById('salle_build').value 
-            };
-            const res = await fetchAPI('/admin/salle', 'POST', body);
-            if(res && !res.error) { showNotify("Salle ajoutée"); loadSalles(); }
-        }
-
-        /* --- AUDIT --- */
-        async function loadAudit() {
-            const data = await fetchAPI('/admin/audit');
-            const tbody = document.querySelector("#auditTable tbody");
-            tbody.innerHTML = "";
-            if(data && !data.error) data.forEach(log => tbody.innerHTML += `<tr><td>${log[0]}</td><td>${log[1]}</td><td>${log[2]}</td><td>${log[3]}</td><td>${log[4]}</td><td>${log[5]}</td></tr>`);
-        }
-
-        /* --- GESTION SECTIONS & INSCRIPTIONS (NOUVEAU) --- */
-        async function loadSectionDropdowns() {
-            const courses = await fetchAPI('/admin/courses');
-            const sems = await fetchAPI('/admin/semesters');
-            const profs = await fetchAPI('/admin/teachers');
-            const salles = await fetchAPI('/admin/salles');
-
-            populateSelect('sec_course', courses, 0, 1);
-            populateSelect('sec_sem', sems, 0, 1);
-            populateSelect('sec_prof', profs, 0, 2); // Profs: ID, Code, Name (Index 2)
-            populateSelect('sec_salle', salles, 0, 1);
-        }
-
-        function populateSelect(id, data, valIdx, textIdx) {
-            const el = document.getElementById(id);
-            el.innerHTML = "";
-            if(data && !data.error) data.forEach(item => {
-                el.innerHTML += `<option value="${item[valIdx]}">${item[textIdx]}</option>`;
+            const tbody = document.querySelector("#sallesTable tbody"); tbody.innerHTML = "";
+            if(data && !data.error) data.forEach(s => {
+                tbody.innerHTML += `<tr><td>${s[1]}</td><td>${s[2]}</td><td>${s[3]}</td><td>
+                    <button class="btn-action btn-edit" onclick="openModal('Capacité', '<label>Nouvelle capacité</label><input type=\\'number\\' id=\\'new_val\\' value=\\'${s[2]}\\'>', 'salle_cap', '${s[1]}')">✏️</button>
+                    <button class="btn-action btn-danger" onclick="deleteItem('/admin/salle/${s[1]}')">🗑️</button>
+                </td></tr>`;
             });
         }
+        async function addSalle() { const body = { code: document.getElementById('salle_code').value, capacity: document.getElementById('salle_cap').value, building: document.getElementById('salle_build').value }; const res = await fetchAPI('/admin/salle', 'POST', body); if(res && !res.error) { showNotify("Ajouté"); loadSalles(); } }
 
+        // --- SECTIONS ---
+        async function loadGlobalData() {
+            const p = await fetchAPI('/admin/teachers');
+            const s = await fetchAPI('/admin/salles');
+            if(p && !p.error) globalProfs = p;
+            if(s && !s.error) globalSalles = s;
+        }
+        
         async function loadSections() {
             const data = await fetchAPI('/admin/sections');
-            const tbody = document.querySelector("#sectionsTable tbody");
-            tbody.innerHTML = "";
+            const tbody = document.querySelector("#sectionsTable tbody"); tbody.innerHTML = "";
             if(data && !data.error) data.forEach(s => {
-                // s: [id, title, sem, prof, salle, day, start, end, enrolled, max]
-                const timeStr = `${s[5]} ${new Date(s[6]).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${new Date(s[7]).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${s[1]}</td>
-                        <td>${s[2]}</td>
-                        <td>${s[3]}</td>
-                        <td>${s[4]}</td>
-                        <td>${timeStr}</td>
-                        <td>${s[8]} / ${s[9]}</td>
-                        <td>
-                            <button class="btn-secondary" onclick="manageRegistrations(${s[0]}, '${s[1]}')">Gérer Inscr.</button>
-                            <button class="btn-danger" onclick="deleteSection(${s[0]})">🗑️</button>
-                        </td>
-                    </tr>
-                `;
+                const timeStr = `${s[5]} ${new Date(s[6]).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - ${new Date(s[7]).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+                // Formulaire pour modifier prof et salle
+                const formHtml = `<label>Professeur</label><select id="upd_prof">${globalProfs.map(p => `<option value="${p[0]}">${p[2]}</option>`).join('')}</select><br><br><label>Salle</label><select id="upd_salle">${globalSalles.map(sl => `<option value="${sl[0]}">${sl[1]}</option>`).join('')}</select>`;
+                
+                tbody.innerHTML += `<tr><td>${s[1]}</td><td>${s[2]}</td><td>${s[3]}</td><td>${s[4]}</td><td>${timeStr}</td><td>${s[8]} / ${s[9]}</td><td>
+                    <button class="btn-action btn-secondary" onclick="manageRegistrations(${s[0]}, '${s[1]}')">👥</button>
+                    <button class="btn-action btn-edit" onclick="openModal('Modifier Section', \`${formHtml}\`, 'section_update', ${s[0]})">✏️</button>
+                    <button class="btn-action btn-lock" title="Bloquer inscriptions" onclick="blockSection(${s[0]})">🔒</button>
+                    <button class="btn-action btn-danger" onclick="deleteItem('/admin/section/${s[0]}')">🗑️</button>
+                </td></tr>`;
             });
         }
-
-        async function addSection() {
-            // Création de date bidon pour le backend (Seul l'heure compte pour l'affichage)
-            const day = "2026-01-01"; 
-            const start = `${day} ${document.getElementById('sec_start').value}:00`;
-            const end = `${day} ${document.getElementById('sec_end').value}:00`;
-
-            const body = {
-                course_code: document.getElementById('sec_course').value,
-                semester_id: document.getElementById('sec_sem').value,
-                instructor_id: document.getElementById('sec_prof').value,
-                salle_id: document.getElementById('sec_salle').value,
-                capacity: document.getElementById('sec_cap').value,
-                day: document.getElementById('sec_day').value,
-                start: start,
-                end: end
-            };
-
+        async function addSection() { /* (Garder la logique existante) */ 
+            const day = "2026-01-01"; const start = `${day} ${document.getElementById('sec_start').value}:00`; const end = `${day} ${document.getElementById('sec_end').value}:00`;
+            const body = { course_code: document.getElementById('sec_course').value, semester_id: document.getElementById('sec_sem').value, instructor_id: document.getElementById('sec_prof').value, salle_id: document.getElementById('sec_salle').value, capacity: document.getElementById('sec_cap').value, day: document.getElementById('sec_day').value, start: start, end: end };
             const res = await fetchAPI('/admin/section', 'POST', body);
-            if(res && !res.error) { showNotify("Section créée"); loadSections(); }
-            else showNotify("Erreur: " + res.error, true);
+            if(res && !res.error) { showNotify("Créée"); loadSections(); } else showNotify("Erreur", true);
         }
-
-        async function deleteSection(id) {
-            if(!confirm("Supprimer cette section ?")) return;
-            const res = await fetchAPI(`/admin/section/${id}`, 'DELETE');
-            if(res && !res.error) { showNotify("Section supprimée"); loadSections(); }
-            else showNotify("Erreur: " + (res.error || "Impossible de supprimer"), true);
+        async function blockSection(id) {
+            if(!confirm("Bloquer les inscriptions (Capacité = Inscrits) ?")) return;
+            const res = await fetchAPI('/admin/section/block', 'PUT', { section_id: id });
+            if(res && !res.error) { showNotify("Section bloquée"); loadSections(); } else showNotify("Erreur", true);
         }
 
         async function manageRegistrations(secId, title) {
             document.getElementById('registrationManager').style.display = 'block';
             document.getElementById('regTitle').innerText = `Inscriptions : ${title}`;
-            
             const data = await fetchAPI(`/admin/section/${secId}/registrations`);
-            const tbody = document.querySelector("#regTable tbody");
-            tbody.innerHTML = "";
-            
-            if(data && !data.error) {
-                if(data.length === 0) tbody.innerHTML = "<tr><td colspan='5'>Aucune inscription</td></tr>";
-                data.forEach(r => {
-                    // r: [reg_id, fname, lname, code, status, date]
-                    let actions = "";
-                    if(r[4] === 'ACTIVE') {
-                        actions = `<button class="btn-danger" onclick="updateStatus(${r[0]}, 'CANCELLED', ${secId}, '${title}')">Annuler</button>`;
-                    } else {
-                        actions = `<button class="btn-primary" onclick="updateStatus(${r[0]}, 'ACTIVE', ${secId}, '${title}')">Accepter</button>`;
-                    }
-
-                    tbody.innerHTML += `
-                        <tr>
-                            <td>${r[1]} ${r[2]}</td>
-                            <td>${r[3]}</td>
-                            <td>${new Date(r[5]).toLocaleDateString()}</td>
-                            <td><strong>${r[4]}</strong></td>
-                            <td>${actions}</td>
-                        </tr>
-                    `;
-                });
-            }
+            const tbody = document.querySelector("#regTable tbody"); tbody.innerHTML = "";
+            if(data && !data.error) data.forEach(r => {
+                let actions = r[4] === 'ACTIVE' ? `<button class="btn-danger" onclick="updateStatus(${r[0]}, 'CANCELLED', ${secId}, '${title}')">Annuler</button>` : `<button class="btn-primary" onclick="updateStatus(${r[0]}, 'ACTIVE', ${secId}, '${title}')">Accepter</button>`;
+                tbody.innerHTML += `<tr><td>${r[1]} ${r[2]}</td><td>${r[3]}</td><td>${new Date(r[5]).toLocaleDateString()}</td><td><strong>${r[4]}</strong></td><td>${actions}</td></tr>`;
+            });
             document.getElementById('registrationManager').scrollIntoView({behavior: 'smooth'});
         }
+        async function updateStatus(regId, status, secId, title) { const res = await fetchAPI('/admin/registration/status', 'PUT', { registration_id: regId, status: status }); if(res && !res.error) manageRegistrations(secId, title); }
+        function closeRegManager() { document.getElementById('registrationManager').style.display = 'none'; }
 
-        async function updateStatus(regId, status, secId, title) {
-            const body = { registration_id: regId, status: status };
-            const res = await fetchAPI('/admin/registration/status', 'PUT', body);
-            if(res && !res.error) { 
-                showNotify("Statut mis à jour"); 
-                manageRegistrations(secId, title); // Refresh table
-            } else {
-                showNotify("Erreur", true);
-            }
+        // --- UTILS ---
+        async function deleteItem(endpoint) { if(!confirm("Confirmer la suppression ?")) return; const res = await fetchAPI(endpoint, 'DELETE'); if(res && !res.error) { showNotify("Supprimé"); showSection(document.querySelector('.section-view.active').id); } else showNotify("Erreur", true); }
+        async function loadSectionDropdowns() { /* ... Code standard de remplissage des selects ... */ 
+            const courses = await fetchAPI('/admin/courses'); const sems = await fetchAPI('/admin/semesters'); const profs = await fetchAPI('/admin/teachers'); const salles = await fetchAPI('/admin/salles');
+            populateSelect('sec_course', courses, 0, 1); populateSelect('sec_sem', sems, 0, 1); populateSelect('sec_prof', profs, 0, 2); populateSelect('sec_salle', salles, 0, 1);
         }
-
-        function closeRegManager() {
-            document.getElementById('registrationManager').style.display = 'none';
-        }
-
+        async function loadDeptDropdown() { const data = await fetchAPI('/admin/departments'); const select = document.getElementById('prof_dept'); select.innerHTML = '<option value="" disabled selected>Choisir...</option>'; if(data && !data.error) data.forEach(d => select.innerHTML += `<option value="${d[0]}">${d[1]}</option>`); }
+        function populateSelect(id, data, valIdx, textIdx) { const el = document.getElementById(id); el.innerHTML = ""; if(data && !data.error) data.forEach(item => el.innerHTML += `<option value="${item[valIdx]}">${item[textIdx]}</option>`); }
+        async function loadAudit() { const data = await fetchAPI('/admin/audit'); const tbody = document.querySelector("#auditTable tbody"); tbody.innerHTML = ""; if(data && !data.error) data.forEach(log => tbody.innerHTML += `<tr><td>${log[0]}</td><td>${log[1]}</td><td>${log[2]}</td><td>${log[3]}</td><td>${log[4]}</td><td>${log[5]}</td></tr>`); }
         function logout() { window.location.href = "login.html"; }
     </script>
 </body>
