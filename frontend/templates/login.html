@@ -4,93 +4,447 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connexion - Université</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body class="login-bg">
-
-    <div class="login-container">
-        <h2>Bienvenue</h2>
-        
-        <select id="role">
-            <option value="" disabled selected>-- Sélectionnez votre rôle --</option>
-            <option value="ADMIN">Administrateur</option>
-            <option value="TEACHER">Professeur</option>
-            <option value="STUDENT">Étudiant</option>
-        </select>
-
-        <input type="text" id="code_apoge" placeholder="Code Apogée / Identifiant">
-        <input type="password" id="password" placeholder="Mot de passe">
-
-        <button onclick="handleLogin()">Se Connecter</button>
-        
-        <p id="error-message" class="error-msg"></p>
-    </div>
-
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <script>
-        // L'URL du Backend (API)
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: '#FF9900',
+                            dark: '#EC7211',
+                            light: '#FFB347',
+                        },
+                        secondary: {
+                            DEFAULT: '#546e8a',
+                            dark: '#3a4d5f',
+                            light: '#6b8aa8',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Custom animations and styles */
+        @keyframes float {
+            0%, 100% {
+                transform: translate(0, 0) scale(1);
+            }
+            50% {
+                transform: translate(30px, -30px) scale(1.1);
+            }
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes shake {
+            0%, 100% {
+                transform: translateX(0);
+            }
+            25% {
+                transform: translateX(-8px);
+            }
+            75% {
+                transform: translateX(8px);
+            }
+        }
+        
+        .animate-float {
+            animation: float 20s ease-in-out infinite;
+        }
+        
+        .animate-slideUp {
+            animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .animate-shake {
+            animation: shake 0.4s ease;
+        }
+        
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, #546e8a 0%, #445768 50%, #3a4d5f 100%);
+        }
+        
+        .bg-gradient-orange {
+            background: linear-gradient(135deg, #FF9900 0%, #EC7211 100%);
+        }
+        
+        /* Custom input styling */
+        input:not(:placeholder-shown) {
+            background-color: #fffef5;
+        }
+        
+        /* Spinner animation */
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        .spinner {
+            animation: spin 0.8s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-gradient-primary min-h-screen flex items-center justify-center relative overflow-hidden font-sans">
+    
+    <!-- Animated Background Effects -->
+    <div class="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-float -translate-y-1/2 translate-x-1/4"></div>
+    <div class="absolute bottom-0 left-0 w-80 h-80 bg-blue-400/5 rounded-full blur-3xl animate-float -translate-y-1/4 -translate-x-1/4" style="animation-delay: 2s;"></div>
+    
+    <!-- Login Container -->
+    <div class="relative z-10 w-full max-w-md px-4 sm:px-6">
+        <div class="bg-white rounded-3xl shadow-2xl p-8 sm:p-10 animate-slideUp">
+            
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <!-- Logo -->
+                <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-orange rounded-2xl shadow-lg mb-6 hover:-translate-y-1 transition-transform duration-300">
+                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 5L5 12V18C5 27 11 35 20 37C29 35 35 27 35 18V12L20 5Z" fill="#37475A"/>
+                        <path d="M20 12L12 16V20C12 24.5 15 29 20 30.5C25 29 28 24.5 28 20V16L20 12Z" fill="white"/>
+                    </svg>
+                </div>
+                
+                <!-- Title -->
+                <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Bienvenue</h2>
+                <p class="text-gray-600 text-sm sm:text-base">Connectez-vous à votre compte</p>
+            </div>
+            
+            <!-- Form -->
+            <form id="loginForm" class="space-y-5">
+                
+                <!-- Role Select -->
+                <div>
+                    <label for="role" class="block text-sm font-semibold text-gray-900 mb-2">
+                        Rôle <span class="text-primary">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-400">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                        </div>
+                        <select 
+                            id="role" 
+                            required
+                            class="block w-full pl-12 pr-10 py-3.5 text-base text-gray-900 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all outline-none appearance-none cursor-pointer font-medium"
+                        >
+                            <option value="" disabled selected>Sélectionnez votre rôle</option>
+                            <option value="ADMIN">Administrateur</option>
+                            <option value="TEACHER">Professeur</option>
+                            <option value="STUDENT">Étudiant</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-400">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Identifiant -->
+                <div>
+                    <label for="code_apoge" class="block text-sm font-semibold text-gray-900 mb-2">
+                        Identifiant <span class="text-primary">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-400">
+                                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                                <polyline points="10 17 15 12 10 7"></polyline>
+                                <line x1="15" y1="12" x2="3" y2="12"></line>
+                            </svg>
+                        </div>
+                        <input 
+                            type="text" 
+                            id="code_apoge" 
+                            placeholder="admin"
+                            autocomplete="username"
+                            required
+                            class="block w-full pl-12 pr-4 py-3.5 text-base text-gray-900 bg-white border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all outline-none font-medium placeholder:text-gray-400 placeholder:font-normal"
+                        >
+                    </div>
+                </div>
+                
+                <!-- Mot de passe -->
+                <div>
+                    <label for="password" class="block text-sm font-semibold text-gray-900 mb-2">
+                        Mot de passe <span class="text-primary">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-400">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                        </div>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            placeholder="••••••••••••"
+                            autocomplete="current-password"
+                            required
+                            class="block w-full pl-12 pr-12 py-3.5 text-base text-gray-900 bg-white border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all outline-none font-medium placeholder:text-gray-400 placeholder:font-normal"
+                        >
+                        <button 
+                            type="button" 
+                            onclick="togglePassword()"
+                            class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-primary transition-colors"
+                            aria-label="Toggle password visibility"
+                        >
+                            <svg id="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <svg id="eye-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hidden">
+                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                <line x1="1" y1="1" x2="23" y2="23"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Submit Button -->
+                <button 
+                    type="submit" 
+                    id="loginBtn"
+                    class="w-full bg-gradient-orange text-white font-semibold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center space-x-2 mt-6"
+                >
+                    <span id="spinner" class="hidden w-5 h-5 border-2 border-white/30 border-t-white rounded-full spinner"></span>
+                    <span id="btnText">Se Connecter</span>
+                </button>
+                
+                <!-- Error Message -->
+                <div id="error-message" class="hidden mt-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
+                    <p class="text-sm font-medium text-red-800"></p>
+                </div>
+                
+                <!-- Success Message -->
+                <div id="success-message" class="hidden mt-4 p-4 bg-green-50 border-l-4 border-green-500 rounded-lg">
+                    <p class="text-sm font-medium text-green-800"></p>
+                </div>
+            </form>
+            
+            <!-- Footer -->
+            <div class="mt-8 pt-6 border-t border-gray-200 text-center">
+                <p class="text-sm text-gray-600">
+                    Problème de connexion ? 
+                    <a href="#" class="text-primary font-semibold hover:text-primary-dark transition-colors hover:underline">
+                        Contactez le support
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript -->
+    <script>
+        /**
+         * LOGIN SCRIPT - University Management System
+         */
+        
+        // Configuration
         const BACKEND_URL = "http://localhost:5000/api";
-
-        async function handleLogin() {
-            const role = document.getElementById('role').value;
-            const code = document.getElementById('code_apoge').value;
-            const pass = document.getElementById('password').value;
-            const errDiv = document.getElementById('error-message');
-
-            // Validation simple
+        
+        // DOM Elements
+        const loginForm = document.getElementById('loginForm');
+        const roleSelect = document.getElementById('role');
+        const codeInput = document.getElementById('code_apoge');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('loginBtn');
+        const btnText = document.getElementById('btnText');
+        const spinner = document.getElementById('spinner');
+        const errorMsg = document.getElementById('error-message');
+        const successMsg = document.getElementById('success-message');
+        const eyeOpen = document.getElementById('eye-open');
+        const eyeClosed = document.getElementById('eye-closed');
+        
+        // Toggle password visibility
+        function togglePassword() {
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeOpen.classList.add('hidden');
+                eyeClosed.classList.remove('hidden');
+            } else {
+                passwordInput.type = 'password';
+                eyeOpen.classList.remove('hidden');
+                eyeClosed.classList.add('hidden');
+            }
+        }
+        
+        // Hide messages
+        function hideMessages() {
+            errorMsg.classList.add('hidden');
+            successMsg.classList.add('hidden');
+        }
+        
+        // Show error message
+        function showError(message) {
+            errorMsg.querySelector('p').textContent = message;
+            errorMsg.classList.remove('hidden');
+            errorMsg.classList.add('animate-shake');
+            setTimeout(() => errorMsg.classList.remove('animate-shake'), 400);
+        }
+        
+        // Show success message
+        function showSuccess(message) {
+            successMsg.querySelector('p').textContent = message;
+            successMsg.classList.remove('hidden');
+        }
+        
+        // Set loading state
+        function setLoadingState(isLoading) {
+            if (isLoading) {
+                loginBtn.disabled = true;
+                loginBtn.classList.add('opacity-85', 'cursor-not-allowed');
+                spinner.classList.remove('hidden');
+                btnText.textContent = 'Connexion en cours...';
+            } else {
+                loginBtn.disabled = false;
+                loginBtn.classList.remove('opacity-85', 'cursor-not-allowed');
+                spinner.classList.add('hidden');
+                btnText.textContent = 'Se Connecter';
+            }
+        }
+        
+        // Handle form submission
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const role = roleSelect.value.trim();
+            const code = codeInput.value.trim();
+            const password = passwordInput.value;
+            
+            // Clear messages
+            hideMessages();
+            
+            // Validation
             if (!role) {
                 showError("Veuillez sélectionner un rôle.");
+                roleSelect.focus();
                 return;
             }
-            if (!code || !pass) {
-                showError("Veuillez remplir tous les champs.");
+            
+            if (!code) {
+                showError("Veuillez entrer votre identifiant.");
+                codeInput.focus();
                 return;
             }
-
+            
+            if (!password) {
+                showError("Veuillez entrer votre mot de passe.");
+                passwordInput.focus();
+                return;
+            }
+            
+            // --- MODIFICATION ICI : J'ai supprimé la vérification de longueur < 4 ---
+            
+            // Set loading state
+            setLoadingState(true);
+            
             try {
-                // 1. Appel au Backend
+                // API Call
                 const response = await fetch(`${BACKEND_URL}/login`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
                     body: JSON.stringify({
                         role: role,
                         code_apoge: code,
-                        password: pass
+                        password: password
                     })
                 });
-
+                
                 const data = await response.json();
-
-                if (response.ok) {
-                    // 2. Stockage des infos (localStorage pour garder la session)
+                
+                if (response.ok && data) {
+                    // Success
                     localStorage.setItem('user_role', data.role);
-                    localStorage.setItem('user_code', data.code_apoge); // Admin peut être null ici
+                    localStorage.setItem('user_code', data.code_apoge || '');
+                    localStorage.setItem('user_name', data.name || '');
+                    localStorage.setItem('login_time', new Date().toISOString());
                     
-                    // 3. Redirection vers le bon Dashboard (Frontend Routes)
-                    if (role === 'ADMIN') {
-                        window.location.href = "/admin";
-                    } else if (role === 'TEACHER') {
-                        // TODO: Créer dashboard_teacher.html plus tard
-                        alert("Dashboard Professeur (À implémenter)");
-                        // window.location.href = "/teacher";
-                    } else if (role === 'STUDENT') {
-                        // TODO: Créer dashboard_student.html plus tard
-                        alert("Dashboard Étudiant (À implémenter)");
-                        // window.location.href = "/student";
-                    }
+                    showSuccess("Connexion réussie ! Redirection en cours...");
+                    
+                    // Redirect
+                    setTimeout(() => {
+                        switch(role) {
+                            case 'ADMIN':
+                                window.location.href = "/admin"; // Assure-toi que cette route existe ou est gérée
+                                break;
+                            case 'TEACHER':
+                                showError("Dashboard Professeur en cours de développement.");
+                                setLoadingState(false);
+                                break;
+                            case 'STUDENT':
+                                showError("Dashboard Étudiant en cours de développement.");
+                                setLoadingState(false);
+                                break;
+                            default:
+                                showError("Rôle non reconnu.");
+                                setLoadingState(false);
+                        }
+                    }, 1200);
                 } else {
-                    showError(data.error || "Échec de la connexion");
+                    // Error
+                    const errorMessage = data.error || data.message || "Identifiants incorrects.";
+                    showError(errorMessage);
+                    setLoadingState(false);
+                    passwordInput.value = '';
+                    passwordInput.focus();
                 }
-
             } catch (error) {
-                console.error(error);
-                showError("Erreur de connexion au serveur.");
+                console.error('Login error:', error);
+                showError("Impossible de se connecter au serveur. Vérifiez votre connexion.");
+                setLoadingState(false);
             }
-        }
-
-        function showError(msg) {
-            const errDiv = document.getElementById('error-message');
-            errDiv.textContent = msg;
-            errDiv.style.display = 'block';
+        });
+        
+        // Clear messages on input
+        [roleSelect, codeInput, passwordInput].forEach(input => {
+            input.addEventListener('input', hideMessages);
+            input.addEventListener('change', hideMessages);
+        });
+        
+        // Auto-focus on role select
+        window.addEventListener('load', () => {
+            roleSelect.focus();
+        });
+        
+        // Check existing login
+        const userRole = localStorage.getItem('user_role');
+        const loginTime = localStorage.getItem('login_time');
+        
+        if (userRole && loginTime) {
+            const loginDate = new Date(loginTime);
+            const now = new Date();
+            const hoursDiff = (now - loginDate) / (1000 * 60 * 60);
+            
+            if (hoursDiff < 24 && userRole === 'ADMIN') {
+                // Redirection directe si déjà connecté (Optionnel, tu peux commenter si tu veux forcer le login)
+                 window.location.href = "/admin";
+            }
         }
     </script>
 </body>

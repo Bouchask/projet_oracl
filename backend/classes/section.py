@@ -1,213 +1,92 @@
 import cx_Oracle
-from datetime import datetime
 import logging
 
 class section:
     def __init__(self, cnn):
         self.cnn = cnn
 
-    def insert_section(self, course_code: int, semester_id: int, instructor_id: int, salle_id: int, max_capacity: int, day_of_week: str, start_time: datetime, end_time: datetime):
+    def insert_section(self, course_code, instructor_id, salle_id, capacity, day, start, end):
         cur = self.cnn.cursor()
         try:
-            cur.execute("insert into section (course_code, semester_id, instructor_id, salle_id, max_capacity, day_of_week, start_time, end_time) values (:1, :2, :3, :4, :5, :6, :7, :8)",
-                        (course_code, semester_id, instructor_id, salle_id, max_capacity, day_of_week, start_time, end_time))
+            cur.execute("""
+                INSERT INTO section (course_code, instructor_id, salle_id, max_capacity, day_of_week, start_time, end_time) 
+                VALUES (:1, :2, :3, :4, :5, :6, :7)
+            """, (course_code, instructor_id, salle_id, capacity, day, start, end))
             self.cnn.commit()
             return True
-        except Exception as e:
+        except cx_Oracle.DatabaseError as e:
+            error, = e.args
             self.cnn.rollback()
-            logging.error(f"Error in creating section: {e}")
+            logging.error(f"Erreur Insert Section: {error.message}")
             return False
-        finally:
-            cur.close()
+        finally: cur.close()
 
-    def select_section_by_id(self, section_id: int):
-        cur = self.cnn.cursor()
-        try:
-            cur.execute("select * from section where section_id = :1", (section_id,))
-            rows = cur.fetchall()
-            return rows
-        except Exception as e:
-            self.cnn.rollback()
-            logging.error(f"Error in selecting section {section_id}: {e}")
-            return None
-        finally:
-            cur.close()
-
-    def select_all_sections(self):
-        cur = self.cnn.cursor()
-        try:
-            cur.execute("select * from section")
-            rows = cur.fetchall()
-            return rows
-        except Exception as e:
-            self.cnn.rollback()
-            logging.error(f"Error in selecting all sections: {e}")
-            return None
-        finally:
-            cur.close()
-
-    def update_section(self, section_id: int, new_instructor_id: int, new_salle_id: int, new_max_capacity: int, new_day_of_week: str, new_start_time: datetime, new_end_time: datetime):
-        cur = self.cnn.cursor()
-        try:
-            cur.execute("update section set instructor_id = :1, salle_id = :2, max_capacity = :3, day_of_week = :4, start_time = :5, end_time = :6 where section_id = :7",
-                        (new_instructor_id, new_salle_id, new_max_capacity, new_day_of_week, new_start_time, new_end_time, section_id))
-            self.cnn.commit()
-            return True
-        except Exception as e:
-            self.cnn.rollback()
-            logging.error(f"Error in updating section {section_id}: {e}")
-            return False
-        finally:
-            cur.close()
-    def update_section_salle(self, section_id: int, new_salle_id: int):
-        cur = self.cnn.cursor()
-        try:
-            cur.execute("update section set salle_id = :1 where section_id = :2",
-                        (new_salle_id, section_id))
-            self.cnn.commit()
-            return True
-        except Exception as e:
-            self.cnn.rollback()
-            logging.error(f"Error in updating section salle {section_id}: {e}")
-            return False
-        finally:
-            cur.close()
-    def update_section_instructor(self, section_id: int, new_instructor_id: int):
-        cur = self.cnn.cursor()
-        try:
-            cur.execute("update section set instructor_id = :1 where section_id = :2",
-                        (new_instructor_id, section_id))
-            self.cnn.commit()
-            return True
-        except Exception as e:
-            self.cnn.rollback()
-            logging.error(f"Error in updating section instructor {section_id}: {e}")
-            return False
-        finally:
-            cur.close()
-    def update_section_time(self, section_id: int, new_start_time: datetime, new_end_time: datetime):
-        cur = self.cnn.cursor()
-        try:
-            cur.execute("update section set start_time = :1, end_time = :2 where section_id = :3",
-                        (new_start_time, new_end_time, section_id))
-            self.cnn.commit()
-            return True
-        except Exception as e:
-            self.cnn.rollback()
-            logging.error(f"Error in updating section time {section_id}: {e}")
-            return False
-        finally:
-            cur.close()
-    def update_section_day(self, section_id: int, new_day_of_week: str):
-        cur = self.cnn.cursor()
-        try:
-            cur.execute("update section set day_of_week = :1 where section_id = :2",
-                        (new_day_of_week, section_id))
-            self.cnn.commit()
-            return True
-        except Exception as e:
-            self.cnn.rollback()
-            logging.error(f"Error in updating section day {section_id}: {e}")
-            return False
-        finally:
-            cur.close()
-    def update_section_max_capacity(self, section_id: int, new_max_capacity: int):
-        cur = self.cnn.cursor()
-        try:
-            cur.execute("update section set max_capacity = :1 where section_id = :2",
-                        (new_max_capacity, section_id))
-            self.cnn.commit()
-            return True
-        except Exception as e:
-            self.cnn.rollback()
-            logging.error(f"Error in updating section max capacity {section_id}: {e}")
-            return False
-        finally:
-            cur.close()
     def get_all_section_details(self):
         cur = self.cnn.cursor()
         try:
-            # L-frontend kaytsnna had l-tartib b dbt:
-            # 0: id, 1: title, 2: sem, 3: prof, 4: salle, 5: day, 6: start, 7: end, 8: enrolled, 9: max
-            cur.execute("""
-                SELECT 
-                    section_id, 
-                    course_title, 
-                    semester_name, 
-                    instructor_name, 
-                    salle_code, 
-                    day_of_week, 
-                    start_time, 
-                    end_time, 
-                    current_enrolled, 
-                    max_capacity 
-                FROM v_section_details
-                ORDER BY semester_name DESC, course_title
-            """)
+            cur.execute("SELECT * FROM v_section_details ORDER BY filiere_name, semester_name")
             return cur.fetchall()
-        except Exception as e:
-            logging.error(f"Error get all sections: {e}")
-            return []
-        finally:
-            cur.close()
-
-    def get_section_details(self, section_id: int):
-        cur = self.cnn.cursor()
-        try:
-            cur.execute("""
-                SELECT course_title, semester_name, instructor_name, salle_code, 
-                       day_of_week, start_time, end_time, max_capacity 
-                FROM v_section_details 
-                WHERE section_id = :1
-            """, (section_id,))
-            rows = cur.fetchall()
-            return rows
-        except Exception as e:
-            self.cnn.rollback()
-            logging.error(f"Error in getting section details {section_id}: {e}")
-            return None
-        finally:
-            cur.close() 
-    def delete_section(self, section_id: int):
-        cur = self.cnn.cursor()
-        try:
-            cur.execute("delete from section where section_id = :1", (section_id,))
-            self.cnn.commit()
-            return True
-        except Exception as e:
-            self.cnn.rollback()
-            logging.error(f"Error in deleting section {section_id}: {e}")
-            return False
-        finally:
-            cur.close()
-    def count_sections(self):
-        cur = self.cnn.cursor()
-        try:
-            cur.execute("SELECT COUNT(*) FROM section")
-            res = cur.fetchone()
-            return res[0] if res else 0
-        except: return 0
         finally: cur.close()
-    def block_section_enrollment(self, section_id):
-        """ 
-        Bloque les inscriptions en mettant la capacité maximale 
-        égale au nombre actuel d'inscrits.
-        """
+
+    def delete_section(self, sid):
         cur = self.cnn.cursor()
         try:
-            # 1. Récupérer le nombre actuel d'inscrits via la vue
-            cur.execute("SELECT current_enrolled FROM v_section_details WHERE section_id = :1", (section_id,))
-            res = cur.fetchone()
-            if not res: return False
-            
-            current_enrolled = res[0]
-            
-            # 2. Mettre à jour la capacité max
-            cur.execute("UPDATE section SET max_capacity = :1 WHERE section_id = :2", (current_enrolled, section_id))
+            cur.execute("DELETE FROM section WHERE section_id = :1", (sid,))
             self.cnn.commit()
             return True
         except Exception as e:
-            self.cnn.rollback()
+            logging.error(f"Erreur Delete Section: {e}")
             return False
-        finally:
-            cur.close()
+        finally: cur.close()
+        
+    # --- CORRECTION ICI ---
+    def block_section_enrollment(self, section_id):
+        cur = self.cnn.cursor()
+        try:
+            # 1. On compte d'abord le nombre d'inscrits réels (ACTIVE ou VALIDE)
+            cur.execute("""
+                SELECT COUNT(*) FROM registration 
+                WHERE section_id = :1 AND status IN ('ACTIVE', 'VALIDE')
+            """, (section_id,))
+            
+            count_result = cur.fetchone()
+            current_enrolled = count_result[0] if count_result else 0
+            
+            # 2. On met à jour la capacité avec ce nombre
+            cur.execute("""
+                UPDATE section 
+                SET max_capacity = :1 
+                WHERE section_id = :2
+            """, (current_enrolled, section_id))
+            
+            self.cnn.commit()
+            return True
+            
+        except cx_Oracle.DatabaseError as e: 
+            error, = e.args
+            self.cnn.rollback()
+            logging.error(f"Erreur Block Section SQL: {error.message}") # Affiche l'erreur réelle
+            return False
+        except Exception as e:
+            self.cnn.rollback()
+            logging.error(f"Erreur Block Section: {e}")
+            return False
+        finally: cur.close()
+        
+    def update_section_instructor(self, sid, pid):
+        cur = self.cnn.cursor()
+        try:
+            cur.execute("UPDATE section SET instructor_id = :1 WHERE section_id = :2", (pid, sid))
+            self.cnn.commit()
+            return True
+        except: return False
+        finally: cur.close()
+
+    def update_section_salle(self, sid, salid):
+        cur = self.cnn.cursor()
+        try:
+            cur.execute("UPDATE section SET salle_id = :1 WHERE section_id = :2", (salid, sid))
+            self.cnn.commit()
+            return True
+        except: return False
+        finally: cur.close()
